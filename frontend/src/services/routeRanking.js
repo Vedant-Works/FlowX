@@ -2,45 +2,32 @@
  * FlowX route ranking engine.
  *
  * Each route gets a score from 0–100 (higher = better).
- * We combine several factors; some use real data, others are placeholders
- * until we add traffic, weather, and incident features later.
+ * We combine several factors: time, distance, traffic, weather, and safety.
  */
-
-import { getIncidentScore } from './incidents.js'
 
 // How much each factor matters for each user preference
 const PREFERENCE_WEIGHTS = {
   fastest: {
-    time: 0.45,
+    time: 0.50,
     distance: 0.15,
     traffic: 0.25,
     weather: 0.05,
     safety: 0.05,
-    incidents: 0.05,
   },
   balanced: {
-    time: 0.25,
+    time: 0.30,
     distance: 0.15,
-    traffic: 0.2,
+    traffic: 0.25,
     weather: 0.15,
     safety: 0.15,
-    incidents: 0.1,
   },
   safest: {
-    time: 0.1,
-    distance: 0.1,
-    traffic: 0.15,
+    time: 0.15,
+    distance: 0.10,
+    traffic: 0.20,
     weather: 0.15,
-    safety: 0.35,
-    incidents: 0.15,
+    safety: 0.40,
   },
-}
-
-function normalizeHigherIsBetter(value, min, max) {
-  if (max === min) {
-    return 85
-  }
-  return 40 + 60 * ((value - min) / (max - min))
 }
 
 function normalizeLowerIsBetter(value, min, max) {
@@ -48,13 +35,6 @@ function normalizeLowerIsBetter(value, min, max) {
     return 85
   }
   return 40 + 60 * ((max - value) / (max - min))
-}
-
-function getAverageSpeedKmh(route) {
-  if (route.duration <= 0) {
-    return 0
-  }
-  return route.distance / 1000 / (route.duration / 3600)
 }
 
 function scoreTime(route, allRoutes) {
@@ -182,15 +162,6 @@ function scoreSafety(route, vehicle, allRoutes) {
   return scoreTraffic(route, allRoutes)
 }
 
-/**
- * Real incident scoring based on community reports.
- * Uses proximity detection to penalize routes near reported incidents.
- */
-function scoreIncidents(route, incidents) {
-  if (!incidents || !incidents.length) return 100
-  return getIncidentScore(route.path, incidents)
-}
-
 function getWeights(preference, vehicle) {
   const base = PREFERENCE_WEIGHTS[preference] || PREFERENCE_WEIGHTS.balanced
 
@@ -212,8 +183,7 @@ function computeTotalScore(breakdown, weights) {
     breakdown.distance * weights.distance +
     breakdown.traffic * weights.traffic +
     breakdown.weather * weights.weather +
-    breakdown.safety * weights.safety +
-    breakdown.incidents * weights.incidents
+    breakdown.safety * weights.safety
 
   return Math.round(total)
 }
@@ -263,7 +233,7 @@ export function getWalkingSafetyWarnings(route, vehicle) {
 /**
  * Rank routes best-first and attach score breakdown to each.
  */
-export function rankRoutes(routes, { vehicle, preference, weather, trafficAnalysis, incidents }) {
+export function rankRoutes(routes, { vehicle, preference, weather, trafficAnalysis }) {
   if (!routes.length) {
     return []
   }
@@ -279,7 +249,6 @@ export function rankRoutes(routes, { vehicle, preference, weather, trafficAnalys
       traffic: Math.round(scoreTraffic(route, trafficAnalysis)),
       weather: Math.round(scoreWeather(weather, vehicle)),
       safety: Math.round(scoreSafety(route, vehicle, routes)),
-      incidents: Math.round(scoreIncidents(route, incidents)),
     }
 
     const safetyWarnings = getWalkingSafetyWarnings(route, vehicle)

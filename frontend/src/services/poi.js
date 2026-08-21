@@ -64,7 +64,7 @@ export async function fetchNearbyPOIs(bounds, category = 'all') {
   // Bounding box string for Overpass query
   const bbox = `${south},${west},${north},${east}`
 
-  let filter = ''
+  let filter
   if (category === 'tourist') {
     filter = `node["tourism"](${bbox}); node["historic"](${bbox}); way["tourism"](${bbox});`
   } else if (category === 'parks') {

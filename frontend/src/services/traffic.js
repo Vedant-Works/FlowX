@@ -4,7 +4,7 @@
  * Supports TomTom Traffic API with intelligent urban peak-hour flow model fallback.
  */
 
-const TOMTOM_API_KEY = import.meta.env.VITE_TOMTOM_API_KEY || null
+export const TOMTOM_API_KEY = import.meta.env.VITE_TOMTOM_API_KEY || null
 
 /**
  * Calculates current peak hour congestion multiplier based on local time
@@ -42,7 +42,8 @@ function getPeakHourMultiplier() {
 /**
  * Fetch real-time traffic flow data from TomTom Flow Segment API for a specific coordinate
  */
-async function fetchTomTomFlowSegment(lat, lon, apiKey) {
+export async function fetchTomTomFlowSegment(lat, lon, apiKey = TOMTOM_API_KEY) {
+  if (!apiKey) return null
   try {
     const url = `https://api.tomtom.com/traffic/services/4/flowSegmentData/relative0/10/json?point=${lat}%2C${lon}&unit=KMPH&key=${apiKey}`
     const response = await fetch(url)
@@ -61,12 +62,14 @@ async function fetchTomTomFlowSegment(lat, lon, apiKey) {
 async function analyzeTomTomRouteTraffic(route, apiKey) {
   if (!route.path || route.path.length === 0) return null
 
-  // Sample points along the route path (e.g. 25%, 50%, 75%)
+  // Sample 5 points evenly along the route path (15%, 35%, 50%, 70%, 85%)
   const len = route.path.length
   const sampleIndices = [
-    Math.floor(len * 0.25),
+    Math.floor(len * 0.15),
+    Math.floor(len * 0.35),
     Math.floor(len * 0.5),
-    Math.floor(len * 0.75),
+    Math.floor(len * 0.7),
+    Math.floor(len * 0.85),
   ].filter((idx) => idx >= 0 && idx < len)
 
   const samplePoints = sampleIndices.map((idx) => route.path[idx])
@@ -129,11 +132,12 @@ export async function analyzeTraffic(routes, vehicle) {
       let congestionFactor = 0
       let delayMinutes = 0
       let dataSource = 'Urban Flow Model'
+      let tomtomData = null
 
       // If TomTom API key is provided and motorized vehicle, fetch real-time TomTom data
       if (!isNonMotorized && TOMTOM_API_KEY) {
         try {
-          const tomtomData = await analyzeTomTomRouteTraffic(route, TOMTOM_API_KEY)
+          tomtomData = await analyzeTomTomRouteTraffic(route, TOMTOM_API_KEY)
           if (tomtomData) {
             congestionFactor = tomtomData.congestionFactor
             delayMinutes = tomtomData.delayMinutes
@@ -203,9 +207,12 @@ export async function analyzeTraffic(routes, vehicle) {
         delayMinutes,
         isPeakHour: peakMultiplier > 1.3,
         dataSource,
+        currentSpeedKmh: tomtomData?.currentSpeedKmh ?? Math.round(avgSpeedKmh),
+        freeFlowSpeedKmh: tomtomData?.freeFlowSpeedKmh ?? 50,
       }
     })
   )
 
   return results
 }
+

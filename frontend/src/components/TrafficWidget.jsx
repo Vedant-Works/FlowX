@@ -4,6 +4,7 @@ function TrafficWidget({ trafficInfo, vehicle }) {
   if (!trafficInfo) return null
 
   const isMotorized = vehicle === 'car' || vehicle === 'truck'
+  const isTomTom = trafficInfo.dataSource === 'TomTom Real-Time'
 
   return (
     <div className="traffic-widget-card animate-fade-in">
@@ -22,9 +23,18 @@ function TrafficWidget({ trafficInfo, vehicle }) {
                 {trafficInfo.congestionFactor}% Congested
               </span>
             </div>
-            <p className="traffic-sublabel">
-              {isMotorized ? 'Live Flow Monitor' : 'Non-motorized route'}
-            </p>
+            <div className="traffic-source-badge-row">
+              {isTomTom ? (
+                <span className="source-tag tomtom-tag">
+                  <span className="pulse-dot"></span>
+                  TomTom Real-Time Flow
+                </span>
+              ) : (
+                <span className="source-tag model-tag">
+                  🤖 Urban Flow Model
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -39,9 +49,9 @@ function TrafficWidget({ trafficInfo, vehicle }) {
           </div>
 
           <div className="traffic-detail-box">
-            <span className="detail-title">Flow Condition</span>
+            <span className="detail-title">Current vs Free Flow</span>
             <span className="detail-value">
-              {trafficInfo.congestionFactor > 50 ? 'Slow Traffic' : 'Optimal'}
+              {trafficInfo.currentSpeedKmh ? `${trafficInfo.currentSpeedKmh} / ${trafficInfo.freeFlowSpeedKmh} km/h` : 'Optimal'}
             </span>
           </div>
         </div>
@@ -61,3 +71,4 @@ function TrafficWidget({ trafficInfo, vehicle }) {
 }
 
 export default TrafficWidget
+

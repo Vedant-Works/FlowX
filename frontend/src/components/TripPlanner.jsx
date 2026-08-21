@@ -23,7 +23,7 @@ const QUICK_TRIPS = [
   { source: 'Times Square, New York', destination: 'Central Park, New York', label: 'NYC Demo' },
 ]
 
-function TripPlanner({ onFindRoutes, isLoading, error, initialSource, initialWaypoint, initialDestination }) {
+function TripPlanner({ onFindRoutes, isLoading, error, initialSource, initialWaypoint, initialDestination, onUserLocation }) {
   const [source, setSource] = useState('')
   const [waypoint, setWaypoint] = useState('')
   const [destination, setDestination] = useState('')
@@ -160,6 +160,8 @@ function TripPlanner({ onFindRoutes, isLoading, error, initialSource, initialWay
           const label = `${placeName} (±${Math.round(accuracy)}m)`
           setSource(label)
           setSourceObj({ lat: latitude, lon: longitude, name: label })
+          // Notify parent so map can pan + show marker
+          onUserLocation?.({ lat: latitude, lon: longitude, name: label, accuracy })
         } catch {
           setLocationError('Could not determine address from current location.')
         } finally {
@@ -198,7 +200,7 @@ function TripPlanner({ onFindRoutes, isLoading, error, initialSource, initialWay
           <span className="quick-trips-label">Quick Trips:</span>
           <div className="quick-chips">
             {(recentTrips.length > 0
-              ? recentTrips.map((t, idx) => ({
+              ? recentTrips.map((t) => ({
                   ...t,
                   label: `${t.source.split(',')[0]} ➔ ${t.destination.split(',')[0]}`,
                 }))

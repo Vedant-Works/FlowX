@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from './components/Navbar'
 import TripPlanner from './components/TripPlanner'
 import WeatherWidget from './components/WeatherWidget'
@@ -19,6 +19,7 @@ function App() {
   const [customOrigin, setCustomOrigin] = useState(null)
   const [customWaypoint, setCustomWaypoint] = useState(null)
   const [customDest, setCustomDest] = useState(null)
+  const [userLocation, setUserLocation] = useState(null)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -62,6 +63,7 @@ function App() {
               initialSource={customOrigin}
               initialWaypoint={customWaypoint}
               initialDestination={customDest}
+              onUserLocation={setUserLocation}
             />
             {tripResult?.weather && (
               <WeatherWidget
@@ -90,7 +92,7 @@ function App() {
             selectedRouteId={selectedRouteId}
             onSelectRoute={setSelectedRouteId}
             isLoading={isLoading}
-            theme={theme}
+            userLocation={userLocation}
             onSetOrigin={(place) => setCustomOrigin(place)}
             onSetWaypoint={(place) => setCustomWaypoint(place)}
             onSetDestination={(place) => setCustomDest(place)}
@@ -102,3 +104,4 @@ function App() {
 }
 
 export default App
+

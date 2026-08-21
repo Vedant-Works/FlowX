@@ -17,7 +17,7 @@ function WeatherWidget({ weather, vehicle, destinationName }) {
               <span className="weather-condition">{weather.condition}</span>
             </div>
             <p className="weather-location-label">
-              Destination Weather
+              {destinationName ? `Weather in ${destinationName.split(',')[0]}` : 'Destination Weather'}
             </p>
           </div>
         </div>

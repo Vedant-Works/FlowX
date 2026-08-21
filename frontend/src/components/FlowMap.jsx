@@ -1,16 +1,24 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { MapContainer, TileLayer, Marker, Polyline, Popup, CircleMarker, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup.js'
 import { formatDistance, formatDuration, reverseGeocode } from '../services/routing'
 import { getRouteColor } from '../utils/routeColors'
 import { fetchNearbyPOIs, POI_CATEGORIES } from '../services/poi'
+import { TOMTOM_API_KEY } from '../services/traffic'
 import NavSimulatorHUD from './NavSimulatorHUD'
 import './FlowMap.css'
 
-const DEFAULT_CENTER = [19.076, 72.8777]
-const DEFAULT_ZOOM = 12
+// India geographic center
+const DEFAULT_CENTER = [20.5937, 78.9629]
+const DEFAULT_ZOOM = 5
+
+// India bounding box – prevents panning outside the country
+const INDIA_BOUNDS = [
+  [6.4, 68.1],   // SW corner
+  [37.6, 97.4],  // NE corner
+]
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 
@@ -40,6 +48,20 @@ function createPoiIcon(iconEmoji) {
     popupAnchor: [0, -15],
   })
 }
+
+// "You are here" pulsing dot icon
+const userLocationIcon = L.divIcon({
+  className: 'user-location-marker',
+  html: `
+    <div class="user-loc-outer">
+      <div class="user-loc-pulse"></div>
+      <div class="user-loc-dot"></div>
+    </div>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+  popupAnchor: [0, -14],
+})
 
 // New Modern Origin Marker (Green Pill Badge)
 const originIcon = L.divIcon({
@@ -92,7 +114,7 @@ function FitBounds({ path, routeId }) {
     if (path?.length) {
       map.fitBounds(path, { padding: [50, 50] })
     }
-  }, [map, routeId])
+  }, [map, routeId, path])
 
   return null
 }
@@ -118,13 +140,23 @@ function MapClickHandler({ onMapClick }) {
   return null
 }
 
+// Smoothly pans + zooms the map to a given position
+function PanTo({ position, zoom = 16 }) {
+  const map = useMap()
+  useEffect(() => {
+    if (position) {
+      map.flyTo(position, zoom, { animate: true, duration: 1.2 })
+    }
+  }, [map, position, zoom])
+  return null
+}
+
 function FlowMap({
   tripResult,
   selectedRouteId,
   onSelectRoute,
   isLoading,
-  theme = 'dark',
-  incidents = [],
+  userLocation,
   onSetOrigin,
   onSetWaypoint,
   onSetDestination,
@@ -134,8 +166,9 @@ function FlowMap({
   const selectedRoute = routes[selectedRouteIndex] ?? routes[0]
   const hasRoutes = routes.length > 0
 
-  // Map Layer Controls - default to false so only selected route is visible
+  // Map Layer Controls
   const [showAltRoutesLayer, setShowAltRoutesLayer] = useState(false)
+  const [showTrafficFlowLayer, setShowTrafficFlowLayer] = useState(Boolean(TOMTOM_API_KEY))
 
   // POI (Places of Interest) state
   const [showPoisLayer, setShowPoisLayer] = useState(false)
@@ -173,7 +206,7 @@ function FlowMap({
 
     async function loadPois() {
       setIsFetchingPois(true)
-      let bounds = null
+      let bounds
 
       if (path.length) {
         const lats = path.map(([lat]) => lat)
@@ -274,6 +307,17 @@ function FlowMap({
       {/* Map Layer Toolbar Controls */}
       {!isNavigating && (
         <div className="map-layer-toolbar animate-fade-in">
+          {TOMTOM_API_KEY && (
+            <button
+              type="button"
+              className={`layer-btn ${showTrafficFlowLayer ? 'active' : ''}`}
+              onClick={() => setShowTrafficFlowLayer((prev) => !prev)}
+              title="Toggle Real-Time TomTom Traffic Flow Layer"
+            >
+              🚦 Live Traffic {showTrafficFlowLayer ? 'ON' : 'OFF'}
+            </button>
+          )}
+
           <button
             type="button"
             className={`layer-btn ${showPoisLayer ? 'active' : ''}`}
@@ -378,14 +422,20 @@ function FlowMap({
           <span className="legend-item">
             <span className="legend-dot rec" /> {showAltRoutesLayer ? 'Selected Route' : 'Selected Corridor'}
           </span>
+          {showTrafficFlowLayer && TOMTOM_API_KEY && (
+            <span className="legend-item"><span className="legend-dot" style={{ backgroundColor: '#10b981' }} /> TomTom Live Flow</span>
+          )}
           {showAltRoutesLayer && <span className="legend-item"><span className="legend-dot alt" /> Alternative</span>}
-          {showPoisLayer && <span className="legend-item">📍 Local Shop/Place</span>}
+          {showPoisLayer && <span className="legend-item">📍 Local Place</span>}
         </div>
       )}
 
       <MapContainer
         center={DEFAULT_CENTER}
         zoom={DEFAULT_ZOOM}
+        minZoom={4}
+        maxBounds={INDIA_BOUNDS}
+        maxBoundsViscosity={1.0}
         scrollWheelZoom={true}
         className="flow-map-canvas"
         zoomControl={true}
@@ -396,7 +446,43 @@ function FlowMap({
           maxZoom={19}
         />
 
+        {/* TomTom Real-Time Live Traffic Raster Tile Layer */}
+        {showTrafficFlowLayer && TOMTOM_API_KEY && (
+          <TileLayer
+            url={`https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=${TOMTOM_API_KEY}`}
+            zIndex={350}
+            opacity={0.78}
+            maxZoom={19}
+          />
+        )}
+
         <MapClickHandler onMapClick={handleMapClick} />
+
+        {/* Pan to user location when GPS fix is received */}
+        {userLocation && !hasRoutes && (
+          <PanTo position={[userLocation.lat, userLocation.lon]} zoom={16} />
+        )}
+
+        {/* "You are here" marker */}
+        {userLocation && (
+          <Marker
+            position={[userLocation.lat, userLocation.lon]}
+            icon={userLocationIcon}
+            zIndexOffset={1100}
+          >
+            <Popup>
+              <div className="location-marker-popup">
+                <span className="location-popup-tag" style={{ background: '#3b82f6' }}>📡 YOUR LOCATION</span>
+                <strong>{userLocation.name?.split(' (±')[0] || 'Current Location'}</strong>
+                {userLocation.accuracy && (
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', display: 'block' }}>
+                    Accuracy: ±{Math.round(userLocation.accuracy)}m
+                  </span>
+                )}
+              </div>
+            </Popup>
+          </Marker>
+        )}
 
         {/* Map Click Context Menu Popup */}
         {clickedLocation && (

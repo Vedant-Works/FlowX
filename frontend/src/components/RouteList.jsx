@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { formatDistance, formatDuration, formatETA } from '../services/routing'
 import { getScoreColor } from '../services/routeRanking'
 import { getRouteColor } from '../utils/routeColors'
+import { exportRouteToGpx } from '../utils/gpxExport'
 import './RouteList.css'
 
 function RouteList({ tripResult, selectedRouteId, onSelectRoute }) {
@@ -19,6 +20,11 @@ function RouteList({ tripResult, selectedRouteId, onSelectRoute }) {
     navigator.clipboard.writeText(summary)
     setCopiedRouteId(route.id)
     setTimeout(() => setCopiedRouteId(null), 2000)
+  }
+
+  function handleExportGpx(e, route) {
+    e.stopPropagation()
+    exportRouteToGpx(route, tripResult.sourceName, tripResult.destinationName)
   }
 
   function toggleExpandSteps(e, routeId) {
@@ -78,6 +84,15 @@ function RouteList({ tripResult, selectedRouteId, onSelectRoute }) {
                     <button
                       type="button"
                       className="share-route-btn"
+                      onClick={(e) => handleExportGpx(e, route)}
+                      title="Download Route as GPX File"
+                    >
+                      GPX
+                    </button>
+
+                    <button
+                      type="button"
+                      className="share-route-btn"
                       onClick={(e) => handleShareRoute(e, route)}
                       title="Copy route summary to clipboard"
                     >
@@ -89,6 +104,7 @@ function RouteList({ tripResult, selectedRouteId, onSelectRoute }) {
                     </span>
                   </div>
                 </div>
+
 
                 <div className="card-main-stats">
                   <div className="stat-item primary-stat">
@@ -132,11 +148,6 @@ function RouteList({ tripResult, selectedRouteId, onSelectRoute }) {
                   <span className="breakdown-pill">
                     🛡️ Safety <strong>{route.breakdown.safety}</strong>
                   </span>
-                  {route.breakdown.incidents < 100 && (
-                    <span className="breakdown-pill incident-pill">
-                      🚨 Incidents <strong>{route.breakdown.incidents}</strong>
-                    </span>
-                  )}
                 </div>
 
                 {route.safetyWarnings?.length > 0 && (

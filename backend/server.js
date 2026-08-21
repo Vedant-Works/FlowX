@@ -7,72 +7,12 @@ const PORT = process.env.PORT || 5000
 app.use(cors())
 app.use(express.json())
 
-// In-memory incidents database store
-let incidentsStore = [
-  {
-    id: 'inc-demo-1',
-    type: 'accident',
-    severity: 'high',
-    lat: 19.0596,
-    lon: 72.8295,
-    description: 'Minor collision reported on Western Express Highway',
-    timestamp: Date.now() - 15 * 60 * 1000,
-  },
-  {
-    id: 'inc-demo-2',
-    type: 'construction',
-    severity: 'medium',
-    lat: 19.0178,
-    lon: 72.8478,
-    description: 'Road work near Dadar TT Circle',
-    timestamp: Date.now() - 45 * 60 * 1000,
-  },
-]
-
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     app: 'FlowX Intelligent Mobility Backend Server',
     timestamp: new Date().toISOString(),
-  })
-})
-
-// Incident Reports Endpoints
-app.get('/api/incidents', (req, res) => {
-  res.json({
-    success: true,
-    count: incidentsStore.length,
-    incidents: incidentsStore,
-  })
-})
-
-app.post('/api/incidents', (req, res) => {
-  const { type, severity, lat, lon, description } = req.body
-
-  if (!type || !lat || !lon) {
-    return res.status(400).json({
-      success: false,
-      message: 'Type, latitude, and longitude are required.',
-    })
-  }
-
-  const newIncident = {
-    id: `inc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    type: type || 'hazard',
-    severity: severity || 'medium',
-    lat: Number(lat),
-    lon: Number(lon),
-    description: description || 'Community reported incident',
-    timestamp: Date.now(),
-  }
-
-  incidentsStore.push(newIncident)
-
-  res.status(201).json({
-    success: true,
-    message: 'Incident reported successfully',
-    incident: newIncident,
   })
 })
 

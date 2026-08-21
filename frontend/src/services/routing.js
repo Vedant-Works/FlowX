@@ -1,7 +1,6 @@
 import { rankRoutes } from './routeRanking.js'
 import { fetchWeather } from './weather.js'
 import { analyzeTraffic } from './traffic.js'
-import { getIncidents } from './incidents.js'
 
 const VEHICLE_PROFILES = {
   car: 'driving',
@@ -53,7 +52,7 @@ export async function geocodePlace(placeInput) {
     return { lat, lon, name: name || queryStr }
   }
 
-  // --- Helper: Nominatim free-text search ---
+  // --- Helper: Nominatim free-text search (restricted to India) ---
   async function searchNominatim(searchTerm, extraParams = {}) {
     try {
       const params = new URLSearchParams({
@@ -62,6 +61,9 @@ export async function geocodePlace(placeInput) {
         addressdetails: '1',
         limit: '8',
         dedupe: '1',
+        countrycodes: 'in',           // India only
+        viewbox: '68.1,37.6,97.4,6.4', // W,N,E,S bounding box of India
+        bounded: '1',                  // restrict results to viewbox
         ...extraParams,
       })
       const res = await fetch(`${NOMINATIM_URL}?${params}`, {
@@ -74,29 +76,42 @@ export async function geocodePlace(placeInput) {
     }
   }
 
-  // --- Helper: Photon (Komoot) geocoder — worldwide, fast, fuzzy ---
+  // --- Helper: Photon (Komoot) geocoder — biased to India ---
   async function searchPhoton(searchTerm) {
     try {
-      const params = new URLSearchParams({ q: searchTerm, limit: '5' })
+      // Bias results toward India's geographic center
+      const params = new URLSearchParams({
+        q: searchTerm,
+        limit: '5',
+        lat: '20.5937',
+        lon: '78.9629',
+      })
       const res = await fetch(`https://photon.komoot.io/api/?${params}`, {
         headers: { Accept: 'application/json' },
       })
       if (!res.ok) return []
       const data = await res.json()
-      return (data.features || []).map((f) => ({
-        lat: String(f.geometry?.coordinates?.[1]),
-        lon: String(f.geometry?.coordinates?.[0]),
-        display_name:
-          [f.properties?.name, f.properties?.street, f.properties?.city, f.properties?.country]
-            .filter(Boolean)
-            .join(', ') || searchTerm,
-      }))
+      // Filter results to India bounding box only
+      return (data.features || [])
+        .filter((f) => {
+          const lat = f.geometry?.coordinates?.[1]
+          const lon = f.geometry?.coordinates?.[0]
+          return lat >= 6.4 && lat <= 37.6 && lon >= 68.1 && lon <= 97.4
+        })
+        .map((f) => ({
+          lat: String(f.geometry?.coordinates?.[1]),
+          lon: String(f.geometry?.coordinates?.[0]),
+          display_name:
+            [f.properties?.name, f.properties?.street, f.properties?.city, f.properties?.country]
+              .filter(Boolean)
+              .join(', ') || searchTerm,
+        }))
     } catch {
       return []
     }
   }
 
-  // --- Helper: Overpass global fuzzy name search ---
+  // --- Helper: Overpass fuzzy name search (restricted to India bbox) ---
   async function searchOverpass(searchTerm) {
     try {
       const cleanName = searchTerm
@@ -104,8 +119,9 @@ export async function geocodePlace(placeInput) {
         .trim()
         .replace(/[\\/"']/g, '') // sanitise for regex injection
       if (cleanName.length < 3) return null
+      // India bounding box: south=6.4, west=68.1, north=37.6, east=97.4
       const overpassQuery = `
-        [out:json][timeout:10];
+        [out:json][timeout:10][bbox:6.4,68.1,37.6,97.4];
         (
           node["name"~"${cleanName}",i];
           way["name"~"${cleanName}",i];
@@ -581,9 +597,8 @@ export async function getRankedRoutes({ source, waypoint, destination, vehicle, 
     fetchWeather(to.lat, to.lon),
   ])
 
-  const incidents = getIncidents()
   const trafficAnalysis = await analyzeTraffic(routes, vehicle)
-  const rankedRoutes = rankRoutes(routes, { vehicle, preference, weather, trafficAnalysis, incidents })
+  const rankedRoutes = rankRoutes(routes, { vehicle, preference, weather, trafficAnalysis })
   const distribution = await computeTrafficDistribution(rankedRoutes)
 
   return {

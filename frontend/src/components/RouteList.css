@@ -1,0 +1,339 @@
+.route-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.route-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.route-list-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pref-badge {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  padding: 4px 10px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+}
+
+.route-cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.route-card {
+  position: relative;
+  display: flex;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  outline: none;
+}
+
+.route-card:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-color-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.route-card.selected {
+  border-color: var(--route-theme);
+  box-shadow: 0 0 0 1px var(--route-theme), var(--shadow-md);
+  background: var(--bg-surface-hover);
+}
+
+.card-stripe {
+  width: 5px;
+  flex-shrink: 0;
+
+}
+
+.route-card-inner {
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rank-and-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rank-badge {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.route-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.route-traffic-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid currentColor;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.top-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-route-btn {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.share-route-btn:hover {
+  color: var(--accent-primary);
+  border-color: var(--border-accent);
+  background: var(--bg-surface-hover);
+}
+
+.score-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.score-good {
+  color: var(--score-good);
+  background: var(--score-good-bg);
+}
+
+.score-medium {
+  color: var(--score-medium);
+  background: var(--score-medium-bg);
+}
+
+.score-low {
+  color: var(--score-low);
+  background: var(--score-low-bg);
+}
+
+.card-main-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.primary-stat {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.secondary-stat {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.score-progress-bar-container {
+  width: 100%;
+  height: 4px;
+  background: var(--border-color);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.score-progress-bar {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 400ms ease-out;
+}
+
+.bar-good {
+  background-color: var(--score-good);
+}
+
+.bar-medium {
+  background-color: var(--score-medium);
+}
+
+.bar-low {
+  background-color: var(--score-low);
+}
+
+.breakdown-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.breakdown-pill {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-glass);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.breakdown-pill strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.incident-pill {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.incident-pill strong {
+  color: #ef4444;
+}
+
+/* Walking Safety Warnings */
+.safety-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+/* Eco Badge */
+.eco-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ETA Badge */
+.eta-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid var(--border-accent);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* Turn-by-Turn Directions Steps */
+.steps-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  border-top: 1px dashed var(--border-color);
+  padding-top: 8px;
+}
+
+.toggle-steps-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--accent-primary);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  width: fit-content;
+}
+
+.toggle-steps-btn:hover {
+  text-decoration: underline;
+}
+
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  padding: 6px 0 0 0;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-glass);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.step-num {
+  font-weight: 700;
+  color: var(--accent-primary);
+  min-width: 14px;
+}
+
+.step-text {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.step-dist {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+

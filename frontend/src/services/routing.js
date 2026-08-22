@@ -210,8 +210,10 @@ export async function reverseGeocode(lat, lon) {
 
   // --- Strategy 1: Overpass Micro-Radius (45m) POI Search for exact shop/building/park name ---
   try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 3500)
     const overpassQuery = `
-      [out:json][timeout:6];
+      [out:json][timeout:3];
       (
         node(around:45,${nLat},${nLon})["name"];
         way(around:45,${nLat},${nLon})["name"];
@@ -222,12 +224,13 @@ export async function reverseGeocode(lat, lon) {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: `data=${encodeURIComponent(overpassQuery)}`,
+      signal: controller.signal,
     })
+    clearTimeout(timeoutId)
 
     if (opRes.ok) {
       const opData = await opRes.json()
       if (opData.elements && opData.elements.length > 0) {
-        // Prioritize shop, amenity, leisure (park), building, tourism
         const sorted = opData.elements.sort((a, b) => {
           const tA = a.tags || {}
           const tB = b.tags || {}
@@ -251,6 +254,8 @@ export async function reverseGeocode(lat, lon) {
 
   // --- Strategy 2: Nominatim zoom=18 high-resolution address reverse geocode ---
   try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 3500)
     const params = new URLSearchParams({
       lat: nLat,
       lon: nLon,
@@ -264,13 +269,14 @@ export async function reverseGeocode(lat, lon) {
         Accept: 'application/json',
         'User-Agent': 'FlowX-Hackathon/1.0',
       },
+      signal: controller.signal,
     })
+    clearTimeout(timeoutId)
 
     if (response.ok) {
       const data = await response.json()
       const addr = data.address || {}
 
-      // Extract specific place name components
       const specificName =
         addr.shop ||
         addr.amenity ||
@@ -304,9 +310,14 @@ export async function reverseGeocode(lat, lon) {
 
   // --- Strategy 3: Photon Komoot reverse geocode fallback ---
   try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 3500)
     const res = await fetch(`https://photon.komoot.io/reverse?lat=${nLat}&lon=${nLon}`, {
       headers: { Accept: 'application/json' },
+      signal: controller.signal,
     })
+    clearTimeout(timeoutId)
+
     if (res.ok) {
       const data = await res.json()
       const feature = data.features?.[0]

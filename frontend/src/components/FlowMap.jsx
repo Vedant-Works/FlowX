@@ -112,7 +112,14 @@ function FitBounds({ path, routeId }) {
 
   useEffect(() => {
     if (path?.length) {
-      map.fitBounds(path, { padding: [50, 50] })
+      try {
+        const size = map.getSize()
+        if (size.x > 0 && size.y > 0) {
+          map.fitBounds(path, { padding: [50, 50] })
+        }
+      } catch (err) {
+        console.warn('FitBounds error:', err)
+      }
     }
   }, [map, routeId, path])
 
@@ -123,8 +130,15 @@ function CameraFollow({ position, isNavigating }) {
   const map = useMap()
 
   useEffect(() => {
-    if (isNavigating && position) {
-      map.panTo(position, { animate: true, duration: 0.5 })
+    if (isNavigating && position && Array.isArray(position) && position.length === 2) {
+      try {
+        const size = map.getSize()
+        if (size.x > 0 && size.y > 0) {
+          map.panTo(position, { animate: true, duration: 0.5 })
+        }
+      } catch (err) {
+        console.warn('CameraFollow error:', err)
+      }
     }
   }, [map, position, isNavigating])
 
@@ -144,10 +158,47 @@ function MapClickHandler({ onMapClick }) {
 function PanTo({ position, zoom = 16 }) {
   const map = useMap()
   useEffect(() => {
-    if (position) {
-      map.flyTo(position, zoom, { animate: true, duration: 1.2 })
+    if (position && Array.isArray(position) && position.length === 2) {
+      const [lat, lon] = position
+      if (typeof lat === 'number' && !isNaN(lat) && typeof lon === 'number' && !isNaN(lon)) {
+        try {
+          const size = map.getSize()
+          if (size.x > 0 && size.y > 0) {
+            map.flyTo([lat, lon], zoom, { animate: true, duration: 1.2 })
+          } else {
+            map.setView([lat, lon], zoom)
+          }
+        } catch (err) {
+          console.warn('PanTo flyTo error:', err)
+        }
+      }
     }
   }, [map, position, zoom])
+  return null
+}
+
+// Automatically recalculates map dimensions on mobile tab switch or resize
+function MapInvalidator({ mobileTab }) {
+  const map = useMap()
+  useEffect(() => {
+    const handleResize = () => {
+      try {
+        map.invalidateSize()
+      } catch (err) {
+        console.warn('invalidateSize error:', err)
+      }
+    }
+
+    handleResize()
+    const timer = setTimeout(handleResize, 150)
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [map, mobileTab])
+
   return null
 }
 
@@ -157,6 +208,7 @@ function FlowMap({
   onSelectRoute,
   isLoading,
   userLocation,
+  mobileTab,
   onSetOrigin,
   onSetWaypoint,
   onSetDestination,
@@ -499,13 +551,13 @@ function FlowMap({
       <MapContainer
         center={DEFAULT_CENTER}
         zoom={DEFAULT_ZOOM}
-        minZoom={4}
-        maxBounds={INDIA_BOUNDS}
-        maxBoundsViscosity={1.0}
+        minZoom={3}
         scrollWheelZoom={true}
         className="flow-map-canvas"
         zoomControl={true}
       >
+        <MapInvalidator mobileTab={mobileTab} />
+
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url={TILE_URL}
@@ -525,12 +577,12 @@ function FlowMap({
         <MapClickHandler onMapClick={handleMapClick} />
 
         {/* Pan to user location when GPS fix is received */}
-        {userLocation && !hasRoutes && (
+        {userLocation && !hasRoutes && typeof userLocation.lat === 'number' && !isNaN(userLocation.lat) && typeof userLocation.lon === 'number' && !isNaN(userLocation.lon) && (
           <PanTo position={[userLocation.lat, userLocation.lon]} zoom={16} />
         )}
 
         {/* "You are here" marker */}
-        {userLocation && (
+        {userLocation && typeof userLocation.lat === 'number' && !isNaN(userLocation.lat) && typeof userLocation.lon === 'number' && !isNaN(userLocation.lon) && (
           <Marker
             position={[userLocation.lat, userLocation.lon]}
             icon={userLocationIcon}

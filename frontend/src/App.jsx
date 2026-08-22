@@ -109,6 +109,7 @@ function App() {
             onSelectRoute={setSelectedRouteId}
             isLoading={isLoading}
             userLocation={userLocation}
+            mobileTab={mobileTab}
             onSetOrigin={(place) => {
               setCustomOrigin(place)
               setMobileTab('plan')

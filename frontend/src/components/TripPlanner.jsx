@@ -156,43 +156,66 @@ function TripPlanner({
     setIsLocating(true)
     setLocationError(null)
 
-    // Use watchPosition for an initial fast fix, then stop after first high-accuracy result
-    let resolved = false
-    const watchId = navigator.geolocation.watchPosition(
-      async (position) => {
-        if (resolved) return
-        resolved = true
-        navigator.geolocation.clearWatch(watchId)
+    const processLocation = async (position) => {
+      try {
+        const { latitude, longitude, accuracy } = position.coords
+        if (typeof latitude !== 'number' || typeof longitude !== 'number' || isNaN(latitude) || isNaN(longitude)) {
+          throw new Error('Invalid coordinate format received.')
+        }
 
+        let placeName = ''
         try {
-          const { latitude, longitude, accuracy } = position.coords
-          const placeName = await reverseGeocode(latitude, longitude)
-          const label = `${placeName} (±${Math.round(accuracy)}m)`
-          setSource(label)
-          setSourceObj({ lat: latitude, lon: longitude, name: label })
-          // Notify parent so map can pan + show marker
-          onUserLocation?.({ lat: latitude, lon: longitude, name: label, accuracy })
+          placeName = await reverseGeocode(latitude, longitude)
         } catch {
-          setLocationError('Could not determine address from current location.')
-        } finally {
-          setIsLocating(false)
+          placeName = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
         }
-      },
-      (geoErr) => {
-        if (resolved) return
-        resolved = true
-        navigator.geolocation.clearWatch(watchId)
+
+        const label = accuracy ? `${placeName} (±${Math.round(accuracy)}m)` : placeName
+        setSource(label)
+        setSourceObj({ lat: latitude, lon: longitude, name: label })
+        // Notify parent so map can pan + show marker
+        onUserLocation?.({ lat: latitude, lon: longitude, name: label, accuracy })
+      } catch (err) {
+        console.error('Location processing error:', err)
+        setLocationError('Could not resolve location address. Please type origin manually.')
+      } finally {
         setIsLocating(false)
-        if (geoErr.code === geoErr.PERMISSION_DENIED) {
-          setLocationError('Location access denied. Please allow location permissions.')
-        } else {
-          setLocationError('Unable to retrieve your location. Please type origin manually.')
-        }
-      },
+      }
+    }
+
+    const handleError = (geoErr) => {
+      // If high accuracy timed out (e.g. indoors on mobile), try with low accuracy (cellular/WiFi)
+      if (geoErr.code === geoErr.TIMEOUT) {
+        navigator.geolocation.getCurrentPosition(
+          processLocation,
+          (fallbackErr) => {
+            setIsLocating(false)
+            if (fallbackErr.code === fallbackErr.PERMISSION_DENIED) {
+              setLocationError('Location permission was denied. Please enable location in browser settings.')
+            } else {
+              setLocationError('Location request timed out. Please enter origin manually.')
+            }
+          },
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+        )
+        return
+      }
+
+      setIsLocating(false)
+      if (geoErr.code === geoErr.PERMISSION_DENIED) {
+        setLocationError('Location permission denied. Please allow location access in your browser.')
+      } else {
+        setLocationError('Unable to retrieve location. Please type origin manually.')
+      }
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      processLocation,
+      handleError,
       {
         enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
+        timeout: 8000,
+        maximumAge: 30000,
       }
     )
   }

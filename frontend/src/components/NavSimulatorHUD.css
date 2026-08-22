@@ -254,5 +254,58 @@
     left: 10px;
     width: auto;
     max-width: none;
+    padding: 12px 14px;
+    gap: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  }
+
+  .nav-vehicle-badge {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+
+  .nav-route-name {
+    font-size: 12px;
+  }
+
+  .nav-instruction-card {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .instruction-icon-wrapper {
+    width: 28px;
+    height: 28px;
+  }
+
+  .instruction-icon-wrapper svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .instruction-heading {
+    font-size: 12px;
+  }
+
+  .instruction-sub {
+    font-size: 10px;
+  }
+
+  .nav-stat-box {
+    padding: 6px 4px;
+  }
+
+  .nav-stat-value {
+    font-size: 12px;
+  }
+
+  .nav-stat-label {
+    font-size: 8px;
+  }
+
+  .nav-control-btn {
+    padding: 6px 12px;
+    font-size: 11px;
   }
 }

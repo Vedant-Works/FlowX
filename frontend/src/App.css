@@ -1,5 +1,6 @@
 .app-container {
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   display: flex;
   flex-direction: column;
@@ -11,6 +12,7 @@
   flex: 1;
   display: flex;
   height: calc(100vh - 60px);
+  height: calc(100dvh - 60px);
   width: 100%;
   overflow: hidden;
   position: relative;
@@ -26,6 +28,7 @@
   border-right: 1px solid var(--border-color);
   z-index: 10;
   box-shadow: var(--shadow-md);
+  -webkit-overflow-scrolling: touch;
 }
 
 .sidebar-inner {
@@ -42,26 +45,160 @@
   background: var(--bg-primary);
 }
 
+/* Mobile Bottom Navigation Bar (Hidden on desktop) */
+.mobile-bottom-nav {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .app-body {
-    flex-direction: column-reverse;
-    overflow-y: auto;
-    height: auto;
+    flex-direction: column;
+    height: calc(100dvh - 56px - 64px - var(--sab));
+    position: relative;
+    overflow: hidden;
   }
 
   .app-sidebar {
     width: 100%;
     min-width: 100%;
     max-width: 100%;
-    height: auto;
+    height: 100%;
     border-right: none;
-    border-top: 1px solid var(--border-color);
+    border-top: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    transition: opacity var(--transition-normal), transform var(--transition-normal);
+  }
+
+  .app-sidebar.mobile-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .app-sidebar.mobile-hidden {
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+    display: none;
+  }
+
+  .sidebar-inner {
+    padding: 14px 14px 28px 14px;
+    gap: 14px;
   }
 
   .app-map-wrapper {
     width: 100%;
-    height: 380px;
-    min-height: 380px;
-    flex: none;
+    height: 100%;
+    min-height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+  }
+
+  .app-map-wrapper.mobile-hidden {
+    display: none;
+  }
+
+  .app-map-wrapper.mobile-visible {
+    display: block;
+  }
+
+  /* Bottom Navigation Bar for Mobile */
+  .mobile-bottom-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    height: calc(60px + var(--sab));
+    padding: 6px 12px calc(6px + var(--sab)) 12px;
+    background: var(--bg-surface);
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    position: relative;
+  }
+
+  .mobile-nav-btn {
+    flex: 1;
+    max-width: 180px;
+    height: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all var(--transition-fast);
+    position: relative;
+    padding: 4px 8px;
+  }
+
+  .mobile-nav-btn:hover {
+    color: var(--text-primary);
+  }
+
+  .mobile-nav-btn.active {
+    color: var(--accent-primary);
+    background: rgba(59, 130, 246, 0.12);
+  }
+
+  .mobile-nav-btn.active .mobile-nav-label {
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  .mobile-nav-icon-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+  }
+
+  .nav-badge-count {
+    position: absolute;
+    top: -4px;
+    right: -8px;
+    min-width: 18px;
+    height: 18px;
+    line-height: 18px;
+    padding: 0 4px;
+    background: var(--accent-gradient);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    border-radius: var(--radius-full);
+    text-align: center;
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+
+  .nav-pulse-dot {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 6px #10b981;
+    animation: live-pulse 1.8s infinite;
   }
 }

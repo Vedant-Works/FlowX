@@ -5,7 +5,7 @@ import { getRouteColor } from '../utils/routeColors'
 import { exportRouteToGpx } from '../utils/gpxExport'
 import './RouteList.css'
 
-function RouteList({ tripResult, selectedRouteId, onSelectRoute }) {
+function RouteList({ tripResult, selectedRouteId, onSelectRoute, onViewMap }) {
   const [copiedRouteId, setCopiedRouteId] = useState(null)
   const [expandedStepsRouteId, setExpandedStepsRouteId] = useState(null)
 
@@ -38,7 +38,19 @@ function RouteList({ tripResult, selectedRouteId, onSelectRoute }) {
         <h3 className="route-list-title">
           Available Routes ({tripResult.routes.length})
         </h3>
-        <span className="pref-badge">{tripResult.preference} Mode</span>
+        <div className="header-badges">
+          <span className="pref-badge">{tripResult.preference} Mode</span>
+          {onViewMap && (
+            <button
+              type="button"
+              className="route-list-map-btn"
+              onClick={onViewMap}
+              title="Show routes on live map"
+            >
+              🗺️ Map
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="route-cards-stack">

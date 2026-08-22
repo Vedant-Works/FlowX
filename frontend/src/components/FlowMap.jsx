@@ -160,6 +160,7 @@ function FlowMap({
   onSetOrigin,
   onSetWaypoint,
   onSetDestination,
+  onOpenPlanner,
 }) {
   const routes = tripResult?.routes ?? []
   const selectedRouteIndex = routes.findIndex((route) => route.id === selectedRouteId)
@@ -169,6 +170,7 @@ function FlowMap({
   // Map Layer Controls
   const [showAltRoutesLayer, setShowAltRoutesLayer] = useState(false)
   const [showTrafficFlowLayer, setShowTrafficFlowLayer] = useState(Boolean(TOMTOM_API_KEY))
+  const [showMobileLayers, setShowMobileLayers] = useState(false)
 
   // POI (Places of Interest) state
   const [showPoisLayer, setShowPoisLayer] = useState(false)
@@ -306,45 +308,64 @@ function FlowMap({
 
       {/* Map Layer Toolbar Controls */}
       {!isNavigating && (
-        <div className="map-layer-toolbar animate-fade-in">
-          {TOMTOM_API_KEY && (
+        <>
+          {/* Mobile Layer Toggle Trigger */}
+          <div className="map-mobile-layer-trigger">
             <button
               type="button"
-              className={`layer-btn ${showTrafficFlowLayer ? 'active' : ''}`}
-              onClick={() => setShowTrafficFlowLayer((prev) => !prev)}
-              title="Toggle Real-Time TomTom Traffic Flow Layer"
+              className={`layer-btn-mobile-trigger ${showMobileLayers ? 'active' : ''}`}
+              onClick={() => setShowMobileLayers((prev) => !prev)}
+              aria-label="Toggle map layers menu"
             >
-              🚦 Live Traffic {showTrafficFlowLayer ? 'ON' : 'OFF'}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
+              </svg>
+              <span>Layers</span>
             </button>
-          )}
+          </div>
 
-          <button
-            type="button"
-            className={`layer-btn ${showPoisLayer ? 'active' : ''}`}
-            onClick={() => setShowPoisLayer((prev) => !prev)}
-            title="Explore Shops, Parks, Tourist Attractions & Cafes"
-          >
-            📍 Explore Places {showPoisLayer ? 'ON' : 'OFF'}
-          </button>
+          <div className={`map-layer-toolbar animate-fade-in ${showMobileLayers ? 'mobile-expanded' : ''}`}>
+            {TOMTOM_API_KEY && (
+              <button
+                type="button"
+                className={`layer-btn ${showTrafficFlowLayer ? 'active' : ''}`}
+                onClick={() => setShowTrafficFlowLayer((prev) => !prev)}
+                title="Toggle Real-Time TomTom Traffic Flow Layer"
+              >
+                🚦 Traffic {showTrafficFlowLayer ? 'ON' : 'OFF'}
+              </button>
+            )}
 
-          {hasRoutes && routes.length > 1 && (
             <button
               type="button"
-              className={`layer-btn ${showAltRoutesLayer ? 'active' : ''}`}
-              onClick={() => setShowAltRoutesLayer((prev) => !prev)}
-              title="Toggle Alternative Routes"
+              className={`layer-btn ${showPoisLayer ? 'active' : ''}`}
+              onClick={() => setShowPoisLayer((prev) => !prev)}
+              title="Explore Shops, Parks, Tourist Attractions & Cafes"
             >
-              🛣️ Alternatives {showAltRoutesLayer ? 'ON' : 'OFF'}
+              📍 Places {showPoisLayer ? 'ON' : 'OFF'}
             </button>
-          )}
-        </div>
+
+            {hasRoutes && routes.length > 1 && (
+              <button
+                type="button"
+                className={`layer-btn ${showAltRoutesLayer ? 'active' : ''}`}
+                onClick={() => setShowAltRoutesLayer((prev) => !prev)}
+                title="Toggle Alternative Routes"
+              >
+                🛣️ Alts {showAltRoutesLayer ? 'ON' : 'OFF'}
+              </button>
+            )}
+          </div>
+        </>
       )}
 
       {/* POI Category Filter Sub-toolbar */}
       {showPoisLayer && !isNavigating && (
         <div className="poi-category-bar animate-fade-in">
           <span className="poi-bar-title">
-            {isFetchingPois ? 'Loading places…' : `Places Found (${pois.length})`}
+            {isFetchingPois ? 'Loading…' : `Places (${pois.length})`}
           </span>
           <div className="poi-category-scroll">
             {POI_CATEGORIES.map((cat) => (
@@ -362,31 +383,76 @@ function FlowMap({
         </div>
       )}
 
+      {/* Floating Route Banner (Desktop) & Floating Route Bottom Card (Mobile) */}
       {selectedRoute && !isLoading && !isNavigating && (
         <div className="floating-route-banner animate-fade-in">
-          <div
-            className="banner-color-dot"
-            style={{ backgroundColor: getRouteColor(selectedRouteIndex).main }}
-          ></div>
-          <div className="banner-details">
-            <span className="banner-title">{selectedRoute.label}</span>
-            <div className="banner-meta">
-              <span>⏱️ {formatDuration(selectedRoute.duration)}</span>
-              <span>📍 {formatDistance(selectedRoute.distance)}</span>
-              <span className="banner-score">Score: {selectedRoute.score}/100</span>
+          {/* Quick Route Switcher on mobile/desktop when multiple routes exist */}
+          {routes.length > 1 && (
+            <div className="banner-route-switcher">
+              {routes.map((r, idx) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className={`banner-switch-chip ${r.id === selectedRoute.id ? 'active' : ''}`}
+                  onClick={() => onSelectRoute(r.id)}
+                  style={{
+                    '--chip-color': getRouteColor(idx).main,
+                  }}
+                >
+                  <span className="chip-rank">#{r.rank}</span>
+                  <span className="chip-time">{formatDuration(r.duration)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="banner-main-row">
+            <div
+              className="banner-color-dot"
+              style={{ backgroundColor: getRouteColor(selectedRouteIndex).main }}
+            ></div>
+            <div className="banner-details">
+              <span className="banner-title">{selectedRoute.label}</span>
+              <div className="banner-meta">
+                <span className="meta-time">⏱️ {formatDuration(selectedRoute.duration)}</span>
+                <span className="meta-dist">📍 {formatDistance(selectedRoute.distance)}</span>
+                <span className="banner-score">Score: {selectedRoute.score}/100</span>
+              </div>
+            </div>
+
+            <div className="banner-actions-group">
+              <button
+                type="button"
+                className="start-nav-banner-btn"
+                onClick={handleStartNavigation}
+                title="Start Live Navigation Simulation"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                Navigate
+              </button>
+
+              {onOpenPlanner && (
+                <button
+                  type="button"
+                  className="banner-details-btn"
+                  onClick={onOpenPlanner}
+                  title="View full turn-by-turn directions"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="8" y1="6" x2="21" y2="6"/>
+                    <line x1="8" y1="12" x2="21" y2="12"/>
+                    <line x1="8" y1="18" x2="21" y2="18"/>
+                    <line x1="3" y1="6" x2="3.01" y2="6"/>
+                    <line x1="3" y1="12" x2="3.01" y2="12"/>
+                    <line x1="3" y1="18" x2="3.01" y2="18"/>
+                  </svg>
+                  <span>Steps</span>
+                </button>
+              )}
             </div>
           </div>
-          <button
-            type="button"
-            className="start-nav-banner-btn"
-            onClick={handleStartNavigation}
-            title="Start Live Navigation Simulation"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="5 3 19 12 5 21 5 3" />
-            </svg>
-            Navigate
-          </button>
         </div>
       )}
 
@@ -423,10 +489,10 @@ function FlowMap({
             <span className="legend-dot rec" /> {showAltRoutesLayer ? 'Selected Route' : 'Selected Corridor'}
           </span>
           {showTrafficFlowLayer && TOMTOM_API_KEY && (
-            <span className="legend-item"><span className="legend-dot" style={{ backgroundColor: '#10b981' }} /> TomTom Live Flow</span>
+            <span className="legend-item"><span className="legend-dot" style={{ backgroundColor: '#10b981' }} /> Live Flow</span>
           )}
           {showAltRoutesLayer && <span className="legend-item"><span className="legend-dot alt" /> Alternative</span>}
-          {showPoisLayer && <span className="legend-item">📍 Local Place</span>}
+          {showPoisLayer && <span className="legend-item">📍 Place</span>}
         </div>
       )}
 

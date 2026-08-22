@@ -87,7 +87,23 @@
 
 @media (max-width: 640px) {
   .navbar {
-    padding: 0 16px;
+    height: 54px;
+    min-height: 54px;
+    padding: 0 14px;
+  }
+  .navbar-brand {
+    gap: 8px;
+  }
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .logo-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .brand-title {
+    font-size: 19px;
   }
   .brand-tagline {
     display: none;
@@ -96,7 +112,12 @@
     display: none;
   }
   .theme-toggle-btn {
-    padding: 8px;
-    border-radius: var(--radius-md);
+    padding: 7px;
+    border-radius: var(--radius-full);
+    min-width: 34px;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }

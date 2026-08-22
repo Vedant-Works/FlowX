@@ -17,6 +17,35 @@
   color: var(--text-primary);
 }
 
+.header-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.route-list-map-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #ffffff;
+  background: var(--accent-gradient);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--accent-glow);
+  transition: all var(--transition-fast);
+  touch-action: manipulation;
+}
+
+.route-list-map-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
 .pref-badge {
   font-size: 11px;
   font-weight: 600;

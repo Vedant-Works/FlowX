@@ -23,7 +23,17 @@ const QUICK_TRIPS = [
   { source: 'Times Square, New York', destination: 'Central Park, New York', label: 'NYC Demo' },
 ]
 
-function TripPlanner({ onFindRoutes, isLoading, error, initialSource, initialWaypoint, initialDestination, onUserLocation }) {
+function TripPlanner({
+  onFindRoutes,
+  isLoading,
+  error,
+  initialSource,
+  initialWaypoint,
+  initialDestination,
+  onUserLocation,
+  onViewMap,
+  hasResults,
+}) {
   const [source, setSource] = useState('')
   const [waypoint, setWaypoint] = useState('')
   const [destination, setDestination] = useState('')
@@ -190,8 +200,25 @@ function TripPlanner({ onFindRoutes, isLoading, error, initialSource, initialWay
   return (
     <div className="trip-planner-card">
       <div className="card-header">
-        <h2 className="card-title">Plan Your Journey</h2>
-        <p className="card-subtitle">AI-driven multi-route congestion balancer</p>
+        <div className="card-header-text">
+          <h2 className="card-title">Plan Your Journey</h2>
+          <p className="card-subtitle">AI-driven multi-route congestion balancer</p>
+        </div>
+        {hasResults && onViewMap && (
+          <button
+            type="button"
+            className="mobile-view-map-quick-btn"
+            onClick={onViewMap}
+            title="Switch to Map View"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+              <line x1="8" y1="2" x2="8" y2="18"/>
+              <line x1="16" y1="6" x2="16" y2="22"/>
+            </svg>
+            <span>View Map</span>
+          </button>
+        )}
       </div>
 
       <form className="trip-form" onSubmit={handleSubmit}>

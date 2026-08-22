@@ -9,7 +9,40 @@
 }
 
 .card-header {
-  margin-bottom: 18px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-view-map-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #ffffff;
+  background: var(--accent-gradient);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--accent-glow);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.mobile-view-map-quick-btn:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
 }
 
 .card-title {
@@ -17,7 +50,7 @@
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.3px;
-  margin: 0 0 4px 0;
+  margin: 0 0 3px 0;
 }
 
 .card-subtitle {
@@ -51,6 +84,37 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+@media (max-width: 768px) {
+  .quick-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .quick-chips::-webkit-scrollbar {
+    display: none;
+  }
+  .trip-planner-card {
+    padding: 16px;
+  }
+  .input-with-icon input {
+    font-size: 16px !important; /* Prevents auto-zoom in iOS */
+    padding: 12px 14px 12px 36px !important;
+  }
+  .select-wrapper select {
+    font-size: 15px !important;
+    padding: 11px 12px !important;
+  }
+  .find-routes-btn {
+    padding: 14px 18px !important;
+    font-size: 15px !important;
+  }
+  .use-location-btn {
+    padding: 4px 6px;
+  }
 }
 
 .quick-chip-btn {

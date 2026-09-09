@@ -32,31 +32,37 @@
 
 ```mermaid
 flowchart TD
-    subgraph Client ["🖥️ Frontend (React + Vite + Leaflet)"]
-        UI["Trip Planner Input\n(Source, Destination, Vehicle, Preference)"]
-        GEO["Geocoding Pipeline\n(6 Fallback Strategies)"]
-        MAP["Interactive Leaflet Map\n& Navigation HUD"]
+    subgraph Client ["🖥️ Frontend &bull; React + Vite + Leaflet"]
+        UI["<b>Trip Planner</b><br/>Origin, Destination, Mode & Preference"]
+        GEO["<b>Geocoding Pipeline</b><br/>6-Tier Resilience Fallback"]
+        MAP["<b>Interactive Map & HUD</b><br/>Leaflet Map + Navigation Simulator"]
     end
 
-    subgraph RoutingEngine ["⚡ Routing & Analysis Engine"]
-        OSRM["OSRM Routing Engine\n(Direct + Corridor Offsets)"]
-        TRAFFIC["Traffic Analyzer\n(TomTom API / Urban Peak Model)"]
-        WEATHER["Weather Service\n(Open-Meteo API)"]
-        RANK["Route Ranking Engine\n(Composite 0-100 Score)"]
+    subgraph RoutingEngine ["⚡ Real-Time Analysis Engine"]
+        OSRM["<b>OSRM Routing</b><br/>Direct Path + Corridor Offsets"]
+        TRAFFIC["<b>Traffic Engine</b><br/>TomTom API + Peak-Hour Model"]
+        WEATHER["<b>Weather Service</b><br/>Open-Meteo Conditions & Rain"]
+        RANK["<b>Ranking Algorithm</b><br/>Composite 0–100 Route Scoring"]
     end
 
-    subgraph Backend ["⚙️ Backend (Express API)"]
-        BAL["Traffic Load Balancer\nPOST /api/routes/balance"]
-        REV["Community Reviews Store\nGET/POST /api/reviews"]
+    subgraph Backend ["⚙️ Backend &bull; Express REST API"]
+        BAL["<b>Traffic Balancer</b><br/><code>POST /api/routes/balance</code>"]
+        REV["<b>Community Reviews</b><br/><code>GET & POST /api/reviews</code>"]
     end
 
     UI --> GEO
     GEO --> OSRM
-    OSRM --> TRAFFIC & WEATHER
-    TRAFFIC & WEATHER --> RANK
+    OSRM --> TRAFFIC
+    OSRM --> WEATHER
+    TRAFFIC --> RANK
+    WEATHER --> RANK
     RANK --> BAL
     BAL --> MAP
-    UI -.-> REV
+    UI -.->|"Reads & Submits"| REV
+
+    style Client fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc
+    style RoutingEngine fill:#0f172a,stroke:#10b981,stroke-width:2px,color:#f8fafc
+    style Backend fill:#0f172a,stroke:#a855f7,stroke-width:2px,color:#f8fafc
 ```
 
 ---
@@ -369,12 +375,22 @@ Safest    [████████████████ 40% Safe] [███
 
 ```mermaid
 flowchart TD
-    Start([User selects Walking]) --> CheckTime{Local Time Check\n`hour >= 20 || hour < 6`}
-    CheckTime -->|Daytime 6:00 AM - 7:59 PM| DayMode[Day Mode Available\nPreferences: Normal\nSuggests fastest + 1 alternative]
-    CheckTime -->|Nighttime 8:00 PM - 5:59 AM| NightMode[Night Safety Active\nDefault Preference: Safest Mode]
-    NightMode --> UserChoice{User Overrides Preference?}
-    UserChoice -->|Keeps 'Safest'| CuratedSafe[Presents 1 Curated Safe Route\n• Avoids deserted alleys\n• Prioritizes well-lit, active streets\n• Maximizes street presence score]
-    UserChoice -->|Selects 'Normal'| NormalWalk[Presents Fastest Route\n• Ignores night safety penalties\n• Standard pedestrian pathing]
+    Start(["🚶 User Selects Walking"]) --> CheckTime{"🕒 Time of Day Check<br/>Between 8:00 PM and 6:00 AM?"}
+    
+    CheckTime -->|"☀️ Day (6:00 AM – 7:59 PM)"| DayMode["<b>Day Walking Mode</b><br/>• Standard Normal Mode<br/>• Shows fastest + alternative paths"]
+    CheckTime -->|"🌙 Night (8:00 PM – 5:59 AM)"| NightMode["<b>Night Safety Mode Active</b><br/>• Defaults to Safest Route<br/>• Live pedestrian safety filter"]
+    
+    NightMode --> UserChoice{"User Preference Override?"}
+    UserChoice -->|"🛡️ Keeps 'Safest'"| CuratedSafe["<b>Single Curated Safe Route</b><br/>• Avoids dark or deserted alleys<br/>• Prioritizes well-lit, active streets<br/>• Suppresses clutter (1 route only)"]
+    UserChoice -->|"⚡ Switches to 'Normal'"| NormalWalk["<b>Direct Walking Route</b><br/>• Standard direct pathing<br/>• Bypasses night safety scoring"]
+
+    style Start fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#ffffff
+    style CheckTime fill:#1e293b,stroke:#f59e0b,stroke-width:2px,color:#ffffff
+    style DayMode fill:#0f172a,stroke:#38bdf8,stroke-width:1.5px,color:#ffffff
+    style NightMode fill:#0f172a,stroke:#f59e0b,stroke-width:1.5px,color:#ffffff
+    style UserChoice fill:#1e293b,stroke:#a855f7,stroke-width:2px,color:#ffffff
+    style CuratedSafe fill:#064e3b,stroke:#10b981,stroke-width:2.5px,color:#ffffff
+    style NormalWalk fill:#1e293b,stroke:#64748b,stroke-width:1.5px,color:#ffffff
 ```
 
 > [!IMPORTANT]

@@ -1,10 +1,14 @@
 import { rankRoutes } from './routeRanking.js'
 import { fetchWeather } from './weather.js'
 import { analyzeTraffic } from './traffic.js'
+import { fetchTomTomTrafficRoutes } from './tomtomRouting.js'
+
+// In-memory cache with 15-min TTL for geocoding queries
+const geocodeCache = new Map()
+const GEOCODE_CACHE_TTL = 15 * 60 * 1000
 
 const VEHICLE_PROFILES = {
   car: 'driving',
-  truck: 'driving',
   bike: 'cycling',
   walking: 'foot',
 }
@@ -42,6 +46,13 @@ export async function geocodePlace(placeInput) {
 
   const queryStr = String(placeInput).trim()
   if (!queryStr) throw new Error('Please enter a valid location.')
+
+  // Check in-memory cache
+  const cacheKey = queryStr.toLowerCase()
+  const cached = geocodeCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < GEOCODE_CACHE_TTL) {
+    return cached.data
+  }
 
   // 2. Raw coordinate pair "lat, lon"
   const coordMatch = queryStr.match(/^([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)$/)
@@ -179,16 +190,19 @@ export async function geocodePlace(placeInput) {
   // Return best match if any strategy succeeded
   if (results.length > 0) {
     const place = results[0]
-    return {
+    const resolved = {
       lat: Number(place.lat),
       lon: Number(place.lon),
       name: place.display_name || queryStr,
     }
+    geocodeCache.set(cacheKey, { data: resolved, timestamp: Date.now() })
+    return resolved
   }
 
   // ===== Strategy 6: Global Overpass name search =====
   const overpassResult = await searchOverpass(queryStr)
   if (overpassResult) {
+    geocodeCache.set(cacheKey, { data: overpassResult, timestamp: Date.now() })
     return overpassResult
   }
 
@@ -353,9 +367,6 @@ function calculateVehicleDuration(distanceMeters, osrmDurationSeconds, vehicle) 
     case 'bike':
       return Math.round((distanceKm / 15) * 3600)
 
-    case 'truck':
-      return Math.round(osrmDurationSeconds * 1.25)
-
     case 'car':
     default:
       return Math.round(osrmDurationSeconds)
@@ -372,9 +383,6 @@ function calculateCo2Emissions(distanceMeters, vehicle) {
     case 'walking':
     case 'bike':
       return 0
-
-    case 'truck':
-      return Number((distanceKm * 0.28).toFixed(2))
 
     case 'car':
     default:
@@ -427,9 +435,20 @@ async function fetchOsrmRaw(coordsString, profile) {
  * Ask OSRM & Corridor Engine for multi-route alternatives (up to 4-5 distinct routes).
  */
 export async function fetchRoutes(from, to, vehicle, via = null) {
-  const profile = VEHICLE_PROFILES[vehicle] || 'driving'
+  // 1. Try real-time TomTom routing for motorized vehicles if configured
+  if (vehicle === 'car') {
+    try {
+      const tomtomRoutes = await fetchTomTomTrafficRoutes(from, to, vehicle, via)
+      if (tomtomRoutes && tomtomRoutes.length > 0) {
+        return tomtomRoutes
+      }
+    } catch (ttErr) {
+      console.warn('TomTom traffic-aware route calculation fallback:', ttErr.message)
+    }
+  }
 
-  // Primary direct request
+  // 2. Primary direct OSRM request fallback
+  const profile = VEHICLE_PROFILES[vehicle] || 'driving'
   const primaryCoords = via
     ? `${from.lon},${from.lat};${via.lon},${via.lat};${to.lon},${to.lat}`
     : `${from.lon},${from.lat};${to.lon},${to.lat}`
@@ -521,7 +540,8 @@ export async function computeTrafficDistribution(rankedRoutes) {
   }
 
   try {
-    const response = await fetch('http://localhost:5000/api/routes/balance', {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'
+    const response = await fetch(`${backendUrl}/api/routes/balance`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -588,7 +608,7 @@ export async function computeTrafficDistribution(rankedRoutes) {
 /**
  * Full pipeline: geocode, fetch multiple routes, weather & live traffic, rank them.
  */
-export async function getRankedRoutes({ source, waypoint, destination, vehicle, preference }) {
+export async function getRankedRoutes({ source, waypoint, destination, vehicle, preference, nightSafety }) {
   const geocodePromises = [
     geocodePlace(source),
     geocodePlace(destination),
@@ -609,8 +629,32 @@ export async function getRankedRoutes({ source, waypoint, destination, vehicle, 
   ])
 
   const trafficAnalysis = await analyzeTraffic(routes, vehicle)
-  const rankedRoutes = rankRoutes(routes, { vehicle, preference, weather, trafficAnalysis })
-  const distribution = await computeTrafficDistribution(rankedRoutes)
+  const rankedRoutes = rankRoutes(routes, { vehicle, preference, weather, trafficAnalysis, nightSafety })
+
+  // Synchronize route durations with traffic delays for accurate ETA & arrival calculations
+  const finalRankedRoutes = rankedRoutes.map((route) => {
+    const trafficObj = trafficAnalysis?.find((t) => t.routeId === route.id)
+    const delayMinutes = route.delayMinutes != null
+      ? route.delayMinutes
+      : (trafficObj?.delayMinutes || 0)
+    const baseDuration = route.baseDuration != null
+      ? route.baseDuration
+      : route.duration
+    // If not already traffic-aware, adjust duration by adding delayMinutes
+    const durationWithTraffic = route.isTrafficAware
+      ? route.duration
+      : Math.round(baseDuration + delayMinutes * 60)
+
+    return {
+      ...route,
+      baseDuration,
+      delayMinutes,
+      duration: durationWithTraffic,
+      traffic: trafficObj || route.traffic,
+    }
+  })
+
+  const distribution = await computeTrafficDistribution(finalRankedRoutes)
 
   return {
     start: [from.lat, from.lon],
@@ -618,12 +662,13 @@ export async function getRankedRoutes({ source, waypoint, destination, vehicle, 
     waypoint: via ? { coords: [via.lat, via.lon], name: via.name } : null,
     sourceName: from.name,
     destinationName: to.name,
-    routes: rankedRoutes,
+    routes: finalRankedRoutes,
     weather,
     trafficAnalysis,
     distribution,
     preference,
     vehicle,
+    nightSafety,
   }
 }
 

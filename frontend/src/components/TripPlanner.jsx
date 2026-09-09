@@ -4,23 +4,30 @@ import LocationInput from './LocationInput'
 import './TripPlanner.css'
 
 const VEHICLE_OPTIONS = [
-  { value: 'car', label: 'Car', icon: '🚗' },
-  { value: 'bike', label: 'Bike', icon: '🚲' },
-  { value: 'truck', label: 'Truck', icon: '🚚' },
+  { value: 'car', label: 'Four-Wheeler', icon: '🚗' },
+  { value: 'bike', label: 'Two-Wheeler', icon: '🛵' },
   { value: 'walking', label: 'Walking', icon: '🚶' },
 ]
 
-const PREFERENCE_OPTIONS = [
-  { value: 'fastest', label: 'Fastest', desc: 'Prioritize time' },
-  { value: 'balanced', label: 'Balanced', desc: 'Best overall' },
-  { value: 'safest', label: 'Safest', desc: 'Avoid hazards' },
+const MOTORIZED_PREFERENCES = [
+  { value: 'fastest', label: 'Fastest', desc: '1 fastest route (least traffic)' },
+  { value: 'balanced', label: 'Balanced', desc: 'Balanced + 1 alternative' },
+]
+
+const WALKING_NIGHT_PREFERENCES = [
+  { value: 'safest', label: 'Safest Mode', desc: '1 active traffic corridor' },
+  { value: 'normal', label: 'Normal Mode', desc: 'Fastest + 1 alternative' },
+]
+
+const WALKING_DAY_PREFERENCES = [
+  { value: 'normal', label: 'Normal Mode', desc: 'Fastest + 1 alternative' },
 ]
 
 const QUICK_TRIPS = [
   { source: 'Bandra West, Mumbai', destination: 'Colaba, Mumbai', label: 'Bandra ➔ Colaba' },
   { source: 'Andheri East, Mumbai', destination: 'BKC, Mumbai', label: 'Andheri ➔ BKC' },
   { source: 'Connaught Place, Delhi', destination: 'India Gate, Delhi', label: 'CP ➔ India Gate' },
-  { source: 'Times Square, New York', destination: 'Central Park, New York', label: 'NYC Demo' },
+  { source: 'MG Road, Bengaluru', destination: 'Koramangala, Bengaluru', label: 'BLR Tech Corridor' },
 ]
 
 function TripPlanner({
@@ -46,6 +53,32 @@ function TripPlanner({
   const [isLocating, setIsLocating] = useState(false)
   const [locationError, setLocationError] = useState(null)
   const [recentTrips, setRecentTrips] = useState([])
+
+  const isNight = (() => {
+    const h = new Date().getHours()
+    return h >= 20 || h < 6
+  })()
+
+  // Dynamic available preferences based on vehicle and time of day
+  const availablePreferences = vehicle === 'walking'
+    ? (isNight ? WALKING_NIGHT_PREFERENCES : WALKING_DAY_PREFERENCES)
+    : MOTORIZED_PREFERENCES
+
+  // Keep preference synchronized when vehicle or time of day changes
+  useEffect(() => {
+    if (vehicle === 'walking') {
+      if (!isNight && preference === 'safest') {
+        setPreference('normal')
+      } else if (preference !== 'safest' && preference !== 'normal') {
+        setPreference(isNight ? 'safest' : 'normal')
+      }
+    } else {
+      // Four-Wheeler or Two-Wheeler
+      if (preference !== 'fastest' && preference !== 'balanced') {
+        setPreference('balanced')
+      }
+    }
+  }, [vehicle, isNight, preference])
 
   useEffect(() => {
     if (initialSource) {
@@ -127,6 +160,7 @@ function TripPlanner({
       destination: finalDest,
       vehicle,
       preference,
+      nightSafety: vehicle === 'walking' ? (preference === 'safest') : undefined,
     })
   }
 
@@ -139,6 +173,7 @@ function TripPlanner({
       destination: dest,
       vehicle,
       preference,
+      nightSafety: vehicle === 'walking' ? (preference === 'safest') : undefined,
     })
   }
 
@@ -401,7 +436,15 @@ function TripPlanner({
               <select
                 id="vehicle"
                 value={vehicle}
-                onChange={(e) => setVehicle(e.target.value)}
+                onChange={(e) => {
+                  const newVehicle = e.target.value
+                  setVehicle(newVehicle)
+                  if (newVehicle === 'walking') {
+                    setPreference(isNight ? 'safest' : 'normal')
+                  } else {
+                    setPreference('balanced')
+                  }
+                }}
               >
                 {VEHICLE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -420,7 +463,7 @@ function TripPlanner({
                 value={preference}
                 onChange={(e) => setPreference(e.target.value)}
               >
-                {PREFERENCE_OPTIONS.map((opt) => (
+                {availablePreferences.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -429,6 +472,36 @@ function TripPlanner({
             </div>
           </div>
         </div>
+
+        {/* Walking Mode Information & Safety Card */}
+        {vehicle === 'walking' && (
+          <div className="walking-night-safety-card animate-fade-in">
+            <div className="night-safety-left">
+              <span className="night-safety-badge-icon">
+                {preference === 'safest' ? '🛡️' : isNight ? '🌙' : '🚶'}
+              </span>
+              <div className="night-safety-info">
+                <span className="night-safety-label">
+                  {preference === 'safest'
+                    ? 'Safest Mode (Active Night Corridor)'
+                    : isNight
+                    ? 'Normal Walking Mode (Night)'
+                    : 'Normal Walking Mode'}
+                </span>
+                <span className="night-safety-desc">
+                  {preference === 'safest'
+                    ? 'Prioritizing 1 well-lit corridor with active live vehicular traffic. Low/no traffic streets are avoided.'
+                    : isNight
+                    ? 'Suggesting fastest route + 1 alternative route. (Select "Safest Mode" in preference for well-trafficked corridor)'
+                    : 'Suggesting fastest route + 1 alternative route. Safest Mode unlocks automatically at night (8:00 PM – 6:00 AM).'}
+                </span>
+              </div>
+            </div>
+            <div className="night-safety-badge-pill">
+              {preference === 'safest' ? '1 Safe Route' : '2 Route Options'}
+            </div>
+          </div>
+        )}
 
         <button type="submit" className="find-routes-btn" disabled={isLoading}>
           {isLoading ? (

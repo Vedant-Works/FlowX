@@ -21,6 +21,13 @@ const PREFERENCE_WEIGHTS = {
     weather: 0.15,
     safety: 0.15,
   },
+  normal: {
+    time: 0.40,
+    distance: 0.25,
+    traffic: 0.15,
+    weather: 0.10,
+    safety: 0.10,
+  },
   safest: {
     time: 0.15,
     distance: 0.10,
@@ -86,16 +93,16 @@ function scoreWeather(weather, vehicle) {
     case 'light_rain':
       if (vehicle === 'walking') return 35
       if (vehicle === 'bike') return 45
-      return 82 // car / truck
+      return 82 // car
     case 'rain':
       if (vehicle === 'walking') return 20
       if (vehicle === 'bike') return 30
-      return 68 // car / truck
+      return 68 // car
     case 'storm':
     case 'snow':
       if (vehicle === 'walking') return 10
       if (vehicle === 'bike') return 15
-      return 40 // car / truck
+      return 40 // car
     default:
       return 85
   }
@@ -105,45 +112,49 @@ function scoreWeather(weather, vehicle) {
  * Enhanced safety scoring.
  *
  * Walking mode:
- * - Penalizes longer routes (shorter = safer for pedestrians)
- * - Time-of-day factor: night hours (8 PM – 6 AM) lower safety for long routes
- * - Route complexity: fewer turns / more direct = safer
+ * - When night safety is active: prioritized by live traffic presence on the road.
+ *   Deserted / low-traffic routes are heavily penalized regardless of length.
+ *   Active corridors with steady vehicular flow receive high safety scores.
+ * - Daytime walking: shorter distance and simpler routes.
  *
  * Bike mode:
  * - Duration-based (less time on road = safer)
  *
- * Car/Truck:
+ * Car mode:
  * - Traffic-based (smoother traffic = safer)
  */
-function scoreSafety(route, vehicle, allRoutes) {
+function scoreSafety(route, vehicle, allRoutes, trafficAnalysis, isNightSafetyActive) {
   const distances = allRoutes.map((item) => item.distance)
 
   if (vehicle === 'walking') {
-    // Base distance score (shorter is safer)
+    const trafficObj = trafficAnalysis?.find((t) => t.routeId === route.id)
+    const trafficActivity = trafficObj?.trafficActivity ?? 50
+    const isDeserted = trafficObj?.isDeserted || trafficActivity < 25
+
+    if (isNightSafetyActive) {
+      // At night, deserted/empty roads pose severe isolation and safety risks.
+      // Active vehicle traffic provides natural surveillance, street lighting, and visibility.
+      if (isDeserted) {
+        // Severe penalty for deserted roads regardless of short distance
+        return Math.min(10, Math.max(2, Math.round(trafficActivity * 0.2)))
+      }
+      // Active traffic corridor: continuous vehicle flow provides high safety
+      return Math.min(100, Math.round(75 + (trafficActivity * 0.25)))
+    }
+
+    // Daytime walking mode or safety ignored: shorter distance is preferred
     let baseScore = normalizeLowerIsBetter(
       route.distance,
       Math.min(...distances),
       Math.max(...distances),
     )
 
-    // Time-of-day penalty: walking at night is riskier for longer routes
-    const hour = new Date().getHours()
-    const isNightTime = hour >= 20 || hour < 6
-
-    if (isNightTime) {
-      // Penalize longer routes more during night
-      const maxDist = Math.max(...distances)
-      const distRatio = maxDist > 0 ? route.distance / maxDist : 0
-      const nightPenalty = distRatio * 20 // Up to -20 for longest route at night
-      baseScore = Math.max(10, baseScore - nightPenalty)
-    }
-
     // Route complexity bonus: fewer points in path = simpler/more direct
     const pathPoints = route.path?.length || 0
     const maxPoints = Math.max(...allRoutes.map((r) => r.path?.length || 0))
     if (maxPoints > 0) {
       const complexityRatio = pathPoints / maxPoints
-      const complexityPenalty = complexityRatio * 8 // Up to -8 for most complex
+      const complexityPenalty = complexityRatio * 8
       baseScore = Math.max(10, baseScore - complexityPenalty)
     }
 
@@ -158,23 +169,12 @@ function scoreSafety(route, vehicle, allRoutes) {
     )
   }
 
-  // Cars/trucks: slight preference for steady speeds (often main roads)
-  return scoreTraffic(route, allRoutes)
+  // Cars: prioritize routes with lower congestion for smoother and safer travel
+  return scoreTraffic(route, trafficAnalysis)
 }
 
-function getWeights(preference, vehicle) {
-  const base = PREFERENCE_WEIGHTS[preference] || PREFERENCE_WEIGHTS.balanced
-
-  // Trucks care more about traffic flow (highway suitability proxy)
-  if (vehicle === 'truck') {
-    return {
-      ...base,
-      traffic: base.traffic + 0.1,
-      time: Math.max(base.time - 0.05, 0.05),
-    }
-  }
-
-  return base
+function getWeights(preference) {
+  return PREFERENCE_WEIGHTS[preference] || PREFERENCE_WEIGHTS.balanced
 }
 
 function computeTotalScore(breakdown, weights) {
@@ -191,14 +191,42 @@ function computeTotalScore(breakdown, weights) {
 /**
  * Generate walking safety warnings for a route.
  */
-export function getWalkingSafetyWarnings(route, vehicle) {
+export function getWalkingSafetyWarnings(
+  route,
+  vehicle,
+  isNightSafetyActive = false,
+  isSafetyIgnoredByUser = false,
+  trafficAnalysis = null
+) {
   if (vehicle !== 'walking') return []
 
   const warnings = []
   const distanceKm = route.distance / 1000
   const durationMin = route.duration / 60
-  const hour = new Date().getHours()
-  const isNightTime = hour >= 20 || hour < 6
+  const trafficObj = trafficAnalysis?.find((t) => t.routeId === route.id)
+  const isDeserted = trafficObj?.isDeserted || (trafficObj?.trafficActivity != null && trafficObj.trafficActivity < 25)
+
+  if (isNightSafetyActive) {
+    if (isDeserted) {
+      warnings.push({
+        type: 'deserted_night',
+        icon: '🚨',
+        message: 'Deserted route with little/no live traffic at night. High isolation risk — NOT suggested regardless of length.',
+      })
+    } else {
+      warnings.push({
+        type: 'safe_night_corridor',
+        icon: '🛡️',
+        message: 'Active traffic corridor: Continuous live vehicle presence provides natural lighting and surveillance.',
+      })
+    }
+  } else if (isSafetyIgnoredByUser && isDeserted) {
+    warnings.push({
+      type: 'deserted_ignored',
+      icon: '⚠️',
+      message: 'Deserted road at night (Safety bypassed for direct shortest route).',
+    })
+  }
 
   // Long walking route warning
   if (distanceKm > 3) {
@@ -206,15 +234,6 @@ export function getWalkingSafetyWarnings(route, vehicle) {
       type: 'distance',
       icon: '🚶',
       message: `Long walk: ${distanceKm.toFixed(1)} km (~${Math.round(durationMin)} min)`,
-    })
-  }
-
-  // Night safety warning
-  if (isNightTime && distanceKm > 1.5) {
-    warnings.push({
-      type: 'night',
-      icon: '🌙',
-      message: 'Night hours — consider well-lit main roads',
     })
   }
 
@@ -233,50 +252,191 @@ export function getWalkingSafetyWarnings(route, vehicle) {
 /**
  * Rank routes best-first and attach score breakdown to each.
  */
-export function rankRoutes(routes, { vehicle, preference, weather, trafficAnalysis }) {
+export function rankRoutes(routes, { vehicle, preference, weather, trafficAnalysis, nightSafety }) {
   if (!routes.length) {
     return []
   }
 
-  const weights = getWeights(preference, vehicle)
+  const hour = new Date().getHours()
+  const isNightHours = hour >= 20 || hour < 6
+
+  // Night safety mode applies STRICTLY AND ONLY to walking mode when preference is 'safest' (or explicit nightSafety)
+  const isNightSafetyActive =
+    vehicle === 'walking' &&
+    (preference === 'safest' || (nightSafety === true && isNightHours))
+
+  const isSafetyIgnoredByUser = vehicle === 'walking' && preference === 'normal' && isNightHours
+
+  const weights = getWeights(preference)
 
   const scored = routes.map((route) => {
     const trafficObj = trafficAnalysis?.find((t) => t.routeId === route.id) || null
+    const isDeserted = trafficObj?.isDeserted || (trafficObj?.trafficActivity != null && trafficObj.trafficActivity < 25)
 
     const breakdown = {
       time: Math.round(scoreTime(route, routes)),
       distance: Math.round(scoreDistance(route, routes)),
       traffic: Math.round(scoreTraffic(route, trafficAnalysis)),
       weather: Math.round(scoreWeather(weather, vehicle)),
-      safety: Math.round(scoreSafety(route, vehicle, routes)),
+      safety: Math.round(scoreSafety(route, vehicle, routes, trafficAnalysis, isNightSafetyActive)),
     }
 
-    const safetyWarnings = getWalkingSafetyWarnings(route, vehicle)
+    const safetyWarnings = getWalkingSafetyWarnings(
+      route,
+      vehicle,
+      isNightSafetyActive,
+      isSafetyIgnoredByUser,
+      trafficAnalysis
+    )
+
+    let totalScore = computeTotalScore(breakdown, weights)
+
+    // When night safety is active, heavily penalize deserted routes so they cannot outrank active routes
+    if (isNightSafetyActive && isDeserted) {
+      totalScore = Math.min(totalScore, 25)
+    }
 
     return {
       ...route,
       traffic: trafficObj,
       breakdown,
-      score: computeTotalScore(breakdown, weights),
+      score: totalScore,
       safetyWarnings,
+      isDesertedAtNight: isNightSafetyActive && isDeserted,
+      isNightSafetyActive,
     }
   })
 
-  scored.sort((a, b) => b.score - a.score)
+  let finalOrder = []
 
-  const ROUTE_LABELS = [
-    '🌟 Recommended Corridor',
-    '⚡ Express Direct',
-    '🌿 Low-Traffic Bypass',
-    '🛡️ Safe Corridor',
-    '🛣️ Outer Bypass',
-  ]
+  if (vehicle === 'walking') {
+    if (preference === 'safest') {
+      // 1) Safest walking mode (Night only): Strictly 1 route option
+      // Prioritizes corridors with active live vehicular traffic; rejects deserted/empty streets
+      const activeRoutes = scored
+        .filter((r) => !r.isDesertedAtNight)
+        .sort((a, b) => b.score - a.score)
 
-  return scored.map((route, index) => ({
-    ...route,
-    rank: index + 1,
-    label: ROUTE_LABELS[index] || `Corridor ${index + 1}`,
-  }))
+      const fallbackRoutes = [...scored].sort((a, b) => b.score - a.score)
+      const topSafeRoute = activeRoutes[0] || fallbackRoutes[0]
+
+      if (topSafeRoute) {
+        finalOrder = [
+          {
+            ...topSafeRoute,
+            rank: 1,
+            label: '🌟 Recommended Safe Night Corridor',
+          },
+        ]
+      }
+    } else {
+      // 2) Normal walking mode: Suggests the fastest route and ONE alternative route (strictly 2 routes)
+      // Route 1: Fastest walking route (lowest duration, then shortest distance)
+      const sortedByTime = [...scored].sort((a, b) => {
+        if (a.duration !== b.duration) return a.duration - b.duration
+        return a.distance - b.distance
+      })
+
+      const fastestRoute = sortedByTime[0]
+
+      // Route 2: Distinct alternative walking corridor
+      let alternativeRoute = sortedByTime.find((r) => r.id !== fastestRoute?.id)
+      if (!alternativeRoute && scored.length > 1) {
+        const sortedByScore = [...scored].sort((a, b) => b.score - a.score)
+        alternativeRoute = sortedByScore.find((r) => r.id !== fastestRoute?.id)
+      }
+
+      if (fastestRoute && alternativeRoute) {
+        finalOrder = [
+          {
+            ...fastestRoute,
+            rank: 1,
+            label: '⚡ Fastest Route',
+          },
+          {
+            ...alternativeRoute,
+            rank: 2,
+            label: '🌿 Alternative Route',
+          },
+        ]
+      } else if (fastestRoute) {
+        finalOrder = [
+          {
+            ...fastestRoute,
+            rank: 1,
+            label: '⚡ Fastest Route',
+          },
+        ]
+      }
+    }
+  } else {
+    // Motorized vehicles: Four-Wheeler (car) & Two-Wheeler (bike)
+    if (preference === 'fastest') {
+      // Fastest route: Show ONLY ONE route which is fastest considering live traffic delays
+      const sortedFastest = [...scored].sort((a, b) => {
+        if (a.duration !== b.duration) return a.duration - b.duration
+        const aDelay = a.traffic?.delayMinutes || 0
+        const bDelay = b.traffic?.delayMinutes || 0
+        if (aDelay !== bDelay) return aDelay - bDelay
+        return a.distance - b.distance
+      })
+
+      const topFastest = sortedFastest[0]
+      if (topFastest) {
+        finalOrder = [
+          {
+            ...topFastest,
+            rank: 1,
+            label: '⚡ Fastest Direct (Least Traffic)',
+          },
+        ]
+      }
+    } else {
+      // Balanced route (default): Show EXACTLY TWO route options (one balanced, one fastest alternative)
+      // Route 1: Balanced route (highest overall score under balanced weights)
+      const sortedByScore = [...scored].sort((a, b) => b.score - a.score)
+      const balancedRoute = sortedByScore[0]
+
+      // Route 2: Fastest route (lowest total duration including live traffic)
+      const sortedByTime = [...scored].sort((a, b) => {
+        if (a.duration !== b.duration) return a.duration - b.duration
+        return a.distance - b.distance
+      })
+
+      let secondRoute = sortedByTime.find((r) => r.id !== balancedRoute?.id)
+      if (!secondRoute && sortedByScore.length > 1) {
+        secondRoute = sortedByScore[1]
+      }
+
+      if (balancedRoute && secondRoute) {
+        const isFirstAlsoFastest = balancedRoute.duration <= secondRoute.duration
+        finalOrder = [
+          {
+            ...balancedRoute,
+            rank: 1,
+            label: '🌟 Recommended Balanced Corridor',
+          },
+          {
+            ...secondRoute,
+            rank: 2,
+            label: isFirstAlsoFastest
+              ? '🌿 Smooth Traffic Alternative'
+              : '⚡ Fastest Corridor',
+          },
+        ]
+      } else if (balancedRoute) {
+        finalOrder = [
+          {
+            ...balancedRoute,
+            rank: 1,
+            label: '🌟 Recommended Balanced Corridor',
+          },
+        ]
+      }
+    }
+  }
+
+  return finalOrder
 }
 
 export function getScoreColor(score) {

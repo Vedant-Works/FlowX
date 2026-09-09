@@ -39,7 +39,12 @@ function RouteList({ tripResult, selectedRouteId, onSelectRoute, onViewMap }) {
           Available Routes ({tripResult.routes.length})
         </h3>
         <div className="header-badges">
-          <span className="pref-badge">{tripResult.preference} Mode</span>
+          <span className="pref-badge">
+            {tripResult.preference
+              ? tripResult.preference.charAt(0).toUpperCase() + tripResult.preference.slice(1)
+              : ''}{' '}
+            Mode
+          </span>
           {onViewMap && (
             <button
               type="button"
@@ -85,10 +90,20 @@ function RouteList({ tripResult, selectedRouteId, onSelectRoute, onViewMap }) {
                       #{route.rank}
                     </span>
                     <span className="route-title">{route.label}</span>
-                    {route.traffic && (
-                      <span className="route-traffic-badge" style={{ color: route.traffic.color, borderColor: route.traffic.color }}>
-                        ● {route.traffic.label}
+                    {route.isDesertedAtNight ? (
+                      <span className="route-traffic-badge deserted-badge" style={{ color: '#ef4444', borderColor: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}>
+                        🚨 Deserted (No Traffic)
                       </span>
+                    ) : tripResult?.vehicle === 'walking' && route.traffic?.trafficActivity >= 50 ? (
+                      <span className="route-traffic-badge active-night-badge" style={{ color: '#10b981', borderColor: '#10b981', background: 'rgba(16, 185, 129, 0.1)' }}>
+                        🛡️ Live Street Traffic
+                      </span>
+                    ) : (
+                      route.traffic && (
+                        <span className="route-traffic-badge" style={{ color: route.traffic.color, borderColor: route.traffic.color }}>
+                          ● {route.traffic.label}
+                        </span>
+                      )
                     )}
                   </div>
 
@@ -125,6 +140,11 @@ function RouteList({ tripResult, selectedRouteId, onSelectRoute, onViewMap }) {
                       <polyline points="12 6 12 12 16 14"/>
                     </svg>
                     <span>{formatDuration(route.duration)}</span>
+                    {route.delayMinutes > 0 && (
+                      <span className="route-delay-tag" title={`Includes estimated ${route.delayMinutes} min traffic delay`}>
+                        +{route.delayMinutes}m delay
+                      </span>
+                    )}
                   </div>
 
                   <div className="stat-item secondary-stat">
@@ -165,9 +185,9 @@ function RouteList({ tripResult, selectedRouteId, onSelectRoute, onViewMap }) {
                 {route.safetyWarnings?.length > 0 && (
                   <div className="safety-warnings">
                     {route.safetyWarnings.map((warning, wIdx) => (
-                      <div key={wIdx} className="safety-warning-badge">
-                        <span>{warning.icon}</span>
-                        <span>{warning.message}</span>
+                      <div key={wIdx} className={`safety-warning-badge warning-${warning.type || 'default'}`}>
+                        <span className="warning-badge-icon">{warning.icon}</span>
+                        <span className="warning-badge-msg">{warning.message}</span>
                       </div>
                     ))}
                   </div>

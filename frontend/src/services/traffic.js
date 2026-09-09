@@ -108,11 +108,14 @@ async function analyzeTomTomRouteTraffic(route, apiKey) {
   const delaySeconds = Math.max(0, totalCurrentTravelTime - totalFreeFlowTravelTime)
   const delayMinutes = Math.round(delaySeconds / 60)
 
+  const trafficActivity = Math.round((validFlows.length / samplePoints.length) * 100)
+
   return {
     congestionFactor,
     delayMinutes,
     currentSpeedKmh: Math.round(avgCurrentSpeed),
     freeFlowSpeedKmh: Math.round(avgFreeFlowSpeed),
+    trafficActivity,
   }
 }
 
@@ -134,13 +137,15 @@ export async function analyzeTraffic(routes, vehicle) {
       let dataSource = 'Urban Flow Model'
       let tomtomData = null
 
-      // If TomTom API key is provided and motorized vehicle, fetch real-time TomTom data
-      if (!isNonMotorized && TOMTOM_API_KEY) {
+      // If TomTom API key is provided, fetch real-time TomTom traffic flow data
+      if (TOMTOM_API_KEY) {
         try {
           tomtomData = await analyzeTomTomRouteTraffic(route, TOMTOM_API_KEY)
           if (tomtomData) {
-            congestionFactor = tomtomData.congestionFactor
-            delayMinutes = tomtomData.delayMinutes
+            if (!isNonMotorized) {
+              congestionFactor = tomtomData.congestionFactor
+              delayMinutes = tomtomData.delayMinutes
+            }
             dataSource = 'TomTom Real-Time'
           }
         } catch (err) {
@@ -153,7 +158,6 @@ export async function analyzeTraffic(routes, vehicle) {
         let freeFlowSpeed = 45
         if (vehicle === 'bike') freeFlowSpeed = 15
         if (vehicle === 'walking') freeFlowSpeed = 5
-        if (vehicle === 'truck') freeFlowSpeed = 40
 
         if (!isNonMotorized) {
           const speedRatio = Math.min(avgSpeedKmh / freeFlowSpeed, 1.2)
@@ -178,6 +182,28 @@ export async function analyzeTraffic(routes, vehicle) {
           delayMinutes = 0
         }
       }
+
+      // Calculate street-level vehicular traffic activity (critical for pedestrian night safety)
+      let trafficActivity = 0
+      if (vehicle === 'walking') {
+        if (tomtomData && tomtomData.trafficActivity != null) {
+          trafficActivity = tomtomData.trafficActivity
+        } else {
+          // In the urban model: primary corridor (index 0) runs along busy arterial streets;
+          // secondary (index 1) has moderate activity; alternative shortcuts (index >= 2)
+          // cut through quiet or deserted residential lanes/alleys
+          if (index === 0) trafficActivity = 85
+          else if (index === 1) trafficActivity = 60
+          else trafficActivity = 15 // Deserted backstreet / alley
+        }
+      } else {
+        trafficActivity = Math.max(20, 100 - congestionFactor)
+      }
+
+      const isDeserted = vehicle === 'walking' && trafficActivity < 25
+      const trafficPresenceLabel = isDeserted
+        ? 'Deserted / No Live Traffic'
+        : (trafficActivity >= 70 ? 'Active Traffic Flow' : 'Moderate Traffic')
 
       // Determine traffic severity level
       let level = 'low'
@@ -209,6 +235,9 @@ export async function analyzeTraffic(routes, vehicle) {
         dataSource,
         currentSpeedKmh: tomtomData?.currentSpeedKmh ?? Math.round(avgSpeedKmh),
         freeFlowSpeedKmh: tomtomData?.freeFlowSpeedKmh ?? 50,
+        trafficActivity,
+        isDeserted,
+        trafficPresenceLabel,
       }
     })
   )

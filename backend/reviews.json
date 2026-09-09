@@ -1,0 +1,52 @@
+[
+  {
+    "id": "rev-1788978837803-csxm",
+    "author": "asdf",
+    "city": "sdfgsdsdfrhe",
+    "route": "sdffgjfg",
+    "rating": 4,
+    "vehicle": "bike",
+    "comment": "sfdsb bad",
+    "createdAt": "2026-09-09T18:33:57.803Z"
+  },
+  {
+    "id": "rev-1788973293455-tay4",
+    "author": "Karan Patel",
+    "city": "Ahmedabad",
+    "route": "SG Highway",
+    "rating": 5,
+    "vehicle": "car",
+    "comment": "Alternative corridors helped avoid bottleneck near flyover!",
+    "createdAt": "2026-09-09T17:01:33.455Z"
+  },
+  {
+    "id": "rev-1",
+    "author": "Aarav Sharma",
+    "city": "Mumbai",
+    "route": "Bandra West ➔ BKC",
+    "rating": 5,
+    "vehicle": "car",
+    "comment": "The alternative corridor saved me 25 minutes during peak evening rush. Smooth bypass!",
+    "createdAt": "2026-09-09T12:01:11.996Z"
+  },
+  {
+    "id": "rev-2",
+    "author": "Priya Iyer",
+    "city": "Bengaluru",
+    "route": "MG Road ➔ Koramangala",
+    "rating": 4,
+    "vehicle": "bike",
+    "comment": "Great suggestions for avoiding the congested junction bottlenecks.",
+    "createdAt": "2026-09-08T17:01:11.997Z"
+  },
+  {
+    "id": "rev-3",
+    "author": "Vikram Mehta",
+    "city": "Delhi",
+    "route": "Connaught Place ➔ India Gate",
+    "rating": 5,
+    "vehicle": "walking",
+    "comment": "Accurate night safety hints and pleasant walking directions.",
+    "createdAt": "2026-09-07T17:01:11.997Z"
+  }
+]

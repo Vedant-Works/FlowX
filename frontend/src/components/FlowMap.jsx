@@ -3,10 +3,11 @@ import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap, useMapEvents 
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup.js'
-import { formatDistance, formatDuration, reverseGeocode } from '../services/routing'
+import { formatDistance, formatDuration, formatETA, reverseGeocode } from '../services/routing'
 import { getRouteColor } from '../utils/routeColors'
 import { fetchNearbyPOIs, POI_CATEGORIES } from '../services/poi'
 import { TOMTOM_API_KEY } from '../services/traffic'
+import { useLiveLocation } from '../services/useLiveLocation'
 import NavSimulatorHUD from './NavSimulatorHUD'
 import './FlowMap.css'
 
@@ -24,8 +25,7 @@ const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 
 const VEHICLE_EMOJIS = {
   car: '🚗',
-  bike: '🚲',
-  truck: '🚚',
+  bike: '🛵',
   walking: '🚶',
 }
 
@@ -62,6 +62,25 @@ const userLocationIcon = L.divIcon({
   iconAnchor: [12, 12],
   popupAnchor: [0, -14],
 })
+
+// Continuous Live Tracking Cursor with directional pointer
+function createLiveTrackingIcon(heading = 0) {
+  const rotation = heading || 0
+  return L.divIcon({
+    className: 'live-tracking-cursor-marker',
+    html: `
+      <div class="live-cursor-outer">
+        <div class="live-cursor-pulse"></div>
+        <div class="live-cursor-dot" style="transform: rotate(${rotation}deg);">
+          <div class="live-cursor-pointer"></div>
+        </div>
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
+  })
+}
 
 // New Modern Origin Marker (Green Pill Badge)
 const originIcon = L.divIcon({
@@ -147,7 +166,7 @@ function CameraFollow({ position, isNavigating }) {
 
 function MapClickHandler({ onMapClick }) {
   useMapEvents({
-    click(e) {
+    dblclick(e) {
       onMapClick(e.latlng)
     },
   })
@@ -230,13 +249,43 @@ function FlowMap({
   const [pois, setPois] = useState([])
   const [isFetchingPois, setIsFetchingPois] = useState(false)
 
+  // Continuous Live GPS Tracking Hook
+  const {
+    isTracking: isLiveTracking,
+    liveLocation,
+    toggleTracking: toggleLiveTracking,
+    startTracking,
+  } = useLiveLocation()
+
+  // Navigation mode: 'sim' (demo simulation) or 'live' (real device GPS tracking)
+  const [navMode, setNavMode] = useState('sim')
+
   // Navigation simulation state
   const [isNavigating, setIsNavigating] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [speedMultiplier, setSpeedMultiplier] = useState(1)
   const [navIndex, setNavIndex] = useState(0)
   const [navPos, setNavPos] = useState(null)
+  // Turn-by-Turn Steps Modal state
+  const [showStepsDrawer, setShowStepsDrawer] = useState(false)
   const animRef = useRef(null)
+
+  // Helper: closest point on path to user live coordinates
+  function getClosestPathIndex(point, routePath) {
+    if (!point || !routePath?.length) return 0
+    let minDistance = Infinity
+    let closestIdx = 0
+    for (let i = 0; i < routePath.length; i++) {
+      const dLat = routePath[i][0] - point[0]
+      const dLon = routePath[i][1] - point[1]
+      const distSq = dLat * dLat + dLon * dLon
+      if (distSq < minDistance) {
+        minDistance = distSq
+        closestIdx = i
+      }
+    }
+    return closestIdx
+  }
 
   // Map Click Popup state
   const [clickedLocation, setClickedLocation] = useState(null)
@@ -331,8 +380,13 @@ function FlowMap({
     if (!path.length) return
     setIsNavigating(true)
     setIsPaused(false)
-    setNavIndex(0)
-    setNavPos(path[0])
+    if (isLiveTracking) {
+      setNavMode('live')
+    } else {
+      setNavMode('sim')
+      setNavIndex(0)
+      setNavPos(path[0])
+    }
   }
 
   function handleStopNavigation() {
@@ -342,10 +396,30 @@ function FlowMap({
     setNavPos(null)
   }
 
-  const progressPct = path.length > 1 ? (navIndex / (path.length - 1)) * 100 : 0
-  const remainingFraction = 1 - progressPct / 100
+  // If GPS is turned off while navigating, immediately fallback to simulation
+  useEffect(() => {
+    if (isNavigating && !isLiveTracking && navMode === 'live') {
+      setNavMode('sim')
+      if (!navPos && path.length > 0) {
+        setNavIndex(0)
+        setNavPos(path[0])
+      }
+    }
+  }, [isNavigating, isLiveTracking, navMode, navPos, path])
+
+  // Active navigation indices and metrics (Live GPS vs Simulation)
+  const activeNavIndex = navMode === 'live' && liveLocation
+    ? getClosestPathIndex([liveLocation.lat, liveLocation.lon], path)
+    : navIndex
+
+  const progressPct = path.length > 1 ? (activeNavIndex / (path.length - 1)) * 100 : 0
+  const remainingFraction = Math.max(0, 1 - progressPct / 100)
   const remainingDistance = (selectedRoute?.distance || 0) * remainingFraction
   const remainingDuration = (selectedRoute?.duration || 0) * remainingFraction
+
+  const displayedSpeed = navMode === 'live' && liveLocation
+    ? liveLocation.speedKmh
+    : (tripResult?.vehicle === 'walking' ? 5 : tripResult?.vehicle === 'bike' ? 15 : 45) * speedMultiplier
 
   const vehicleIcon = createVehicleIcon(tripResult?.vehicle || 'car')
 
@@ -379,6 +453,18 @@ function FlowMap({
           </div>
 
           <div className={`map-layer-toolbar animate-fade-in ${showMobileLayers ? 'mobile-expanded' : ''}`}>
+            <button
+              type="button"
+              className={`layer-btn live-gps-btn ${isLiveTracking ? 'active' : ''}`}
+              onClick={() => {
+                toggleLiveTracking()
+                if (!isLiveTracking && !isNavigating) startTracking()
+              }}
+              title="Continuous Live GPS Location Tracking"
+            >
+              📡 Live GPS {isLiveTracking ? 'ON' : 'OFF'}
+            </button>
+
             {TOMTOM_API_KEY && (
               <button
                 type="button"
@@ -477,32 +563,33 @@ function FlowMap({
                 type="button"
                 className="start-nav-banner-btn"
                 onClick={handleStartNavigation}
-                title="Start Live Navigation Simulation"
+                title={isLiveTracking ? 'Start Live Turn-by-Turn GPS Navigation' : 'Live GPS is OFF — Start Route Simulation'}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="5 3 19 12 5 21 5 3" />
                 </svg>
-                Navigate
+                {isLiveTracking ? 'Live GPS Nav' : 'Simulate Route'}
               </button>
 
-              {onOpenPlanner && (
-                <button
-                  type="button"
-                  className="banner-details-btn"
-                  onClick={onOpenPlanner}
-                  title="View full turn-by-turn directions"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <line x1="8" y1="6" x2="21" y2="6"/>
-                    <line x1="8" y1="12" x2="21" y2="12"/>
-                    <line x1="8" y1="18" x2="21" y2="18"/>
-                    <line x1="3" y1="6" x2="3.01" y2="6"/>
-                    <line x1="3" y1="12" x2="3.01" y2="12"/>
-                    <line x1="3" y1="18" x2="3.01" y2="18"/>
-                  </svg>
-                  <span>Steps</span>
-                </button>
-              )}
+              <button
+                type="button"
+                className="banner-details-btn"
+                onClick={() => {
+                  setShowStepsDrawer(true)
+                  onOpenPlanner?.()
+                }}
+                title="View full turn-by-turn directions"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="8" y1="6" x2="21" y2="6"/>
+                  <line x1="8" y1="12" x2="21" y2="12"/>
+                  <line x1="8" y1="18" x2="21" y2="18"/>
+                  <line x1="3" y1="6" x2="3.01" y2="6"/>
+                  <line x1="3" y1="12" x2="3.01" y2="12"/>
+                  <line x1="3" y1="18" x2="3.01" y2="18"/>
+                </svg>
+                <span>Steps</span>
+              </button>
             </div>
           </div>
         </div>
@@ -514,15 +601,13 @@ function FlowMap({
           selectedRoute={selectedRoute}
           vehicle={tripResult?.vehicle}
           progressPct={progressPct}
-          currentSpeed={
-            (tripResult?.vehicle === 'walking' ? 5 : tripResult?.vehicle === 'bike' ? 15 : 45) * speedMultiplier
-          }
+          currentSpeed={displayedSpeed}
           isPaused={isPaused}
           speedMultiplier={speedMultiplier}
           currentInstruction={
-            navIndex < path.length / 3
+            activeNavIndex < path.length / 3
               ? `Proceed onto ${tripResult.sourceName?.split(',')[0] || 'Origin route'}`
-              : navIndex < (path.length * 2) / 3
+              : activeNavIndex < (path.length * 2) / 3
               ? 'Follow optimal FlowX balanced corridor'
               : `Arriving soon at ${tripResult.destinationName?.split(',')[0] || 'Destination'}`
           }
@@ -531,6 +616,9 @@ function FlowMap({
           onPauseToggle={() => setIsPaused((prev) => !prev)}
           onSpeedChange={setSpeedMultiplier}
           onStop={handleStopNavigation}
+          navMode={navMode}
+          onToggleNavMode={() => setNavMode((prev) => (prev === 'live' ? 'sim' : 'live'))}
+          isLiveTracking={isLiveTracking}
         />
       )}
 
@@ -553,6 +641,7 @@ function FlowMap({
         zoom={DEFAULT_ZOOM}
         minZoom={3}
         scrollWheelZoom={true}
+        doubleClickZoom={false}
         className="flow-map-canvas"
         zoomControl={true}
       >
@@ -576,13 +665,37 @@ function FlowMap({
 
         <MapClickHandler onMapClick={handleMapClick} />
 
+        {/* Continuous Live User GPS Tracking Marker */}
+        {liveLocation && (
+          <>
+            <Marker
+              position={[liveLocation.lat, liveLocation.lon]}
+              icon={createLiveTrackingIcon(liveLocation.heading)}
+              zIndexOffset={1200}
+            >
+              <Popup>
+                <div className="location-marker-popup">
+                  <span className="location-popup-tag" style={{ background: '#10b981' }}>📡 LIVE GPS TRACKING</span>
+                  <strong>Live Position</strong>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', display: 'block' }}>
+                    Speed: {liveLocation.speedKmh} km/h • Accuracy: ±{Math.round(liveLocation.accuracy)}m
+                  </span>
+                </div>
+              </Popup>
+            </Marker>
+            {isNavigating && navMode === 'live' && (
+              <CameraFollow position={[liveLocation.lat, liveLocation.lon]} isNavigating={true} />
+            )}
+          </>
+        )}
+
         {/* Pan to user location when GPS fix is received */}
-        {userLocation && !hasRoutes && typeof userLocation.lat === 'number' && !isNaN(userLocation.lat) && typeof userLocation.lon === 'number' && !isNaN(userLocation.lon) && (
+        {!liveLocation && userLocation && !hasRoutes && typeof userLocation.lat === 'number' && !isNaN(userLocation.lat) && typeof userLocation.lon === 'number' && !isNaN(userLocation.lon) && (
           <PanTo position={[userLocation.lat, userLocation.lon]} zoom={16} />
         )}
 
-        {/* "You are here" marker */}
-        {userLocation && typeof userLocation.lat === 'number' && !isNaN(userLocation.lat) && typeof userLocation.lon === 'number' && !isNaN(userLocation.lon) && (
+        {/* Static "You are here" marker if not continuous tracking */}
+        {!liveLocation && userLocation && typeof userLocation.lat === 'number' && !isNaN(userLocation.lat) && typeof userLocation.lon === 'number' && !isNaN(userLocation.lon) && (
           <Marker
             position={[userLocation.lat, userLocation.lon]}
             icon={userLocationIcon}
@@ -781,6 +894,93 @@ function FlowMap({
             </Marker>
           ))}
       </MapContainer>
+
+      {/* In-Map Turn-by-Turn Directions Modal */}
+      {showStepsDrawer && selectedRoute && (
+        <div className="flowmap-steps-modal-backdrop animate-fade-in" onClick={() => setShowStepsDrawer(false)}>
+          <div className="flowmap-steps-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="steps-modal-header">
+              <div className="steps-modal-title-group">
+                <span className="steps-modal-badge">Turn-by-Turn Guide</span>
+                <h3 className="steps-modal-title">{selectedRoute.label}</h3>
+                <span className="steps-modal-subtitle">
+                  📍 {formatDistance(selectedRoute.distance)} • ⏱️ {formatDuration(selectedRoute.duration)} • 🕒 Arrival {formatETA(selectedRoute.duration)}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="steps-modal-close-btn"
+                onClick={() => setShowStepsDrawer(false)}
+                title="Close directions"
+                aria-label="Close directions"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="steps-modal-body">
+              {selectedRoute.steps?.length > 0 ? (
+                <ol className="modal-steps-list">
+                  {selectedRoute.steps.map((step, sIdx) => (
+                    <li key={sIdx} className="modal-step-item">
+                      <span className="modal-step-num">{sIdx + 1}</span>
+                      <div className="modal-step-content">
+                        <span className="modal-step-text">{step.instruction}</span>
+                        {step.distance > 0 && (
+                          <span className="modal-step-dist">{formatDistance(step.distance)}</span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <div className="modal-steps-fallback">
+                  <div className="modal-step-item">
+                    <span className="modal-step-num">1</span>
+                    <div className="modal-step-content">
+                      <span className="modal-step-text">
+                        Depart from {tripResult?.sourceName?.split(',')[0] || 'Origin'} along designated corridor
+                      </span>
+                    </div>
+                  </div>
+                  {tripResult?.waypoint && (
+                    <div className="modal-step-item">
+                      <span className="modal-step-num">2</span>
+                      <div className="modal-step-content">
+                        <span className="modal-step-text">
+                          Pass through stopover at {tripResult.waypoint.name?.split(',')[0] || 'Stopover'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="modal-step-item">
+                    <span className="modal-step-num">{tripResult?.waypoint ? 3 : 2}</span>
+                    <div className="modal-step-content">
+                      <span className="modal-step-text">
+                        Arrive at {tripResult?.destinationName?.split(',')[0] || 'Destination'}
+                      </span>
+                      <span className="modal-step-dist">{formatDistance(selectedRoute.distance)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="steps-modal-footer">
+              <button
+                type="button"
+                className="steps-modal-start-btn"
+                onClick={() => {
+                  setShowStepsDrawer(false)
+                  handleStartNavigation()
+                }}
+              >
+                ▶️ {isLiveTracking ? 'Start Live GPS Navigation' : 'Start Route Simulation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

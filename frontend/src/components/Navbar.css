@@ -60,6 +60,30 @@
 .navbar-actions {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.community-reviews-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.community-reviews-btn:hover {
+  color: var(--accent-primary);
+  border-color: var(--border-color-hover);
+  background: var(--bg-surface-hover);
+  transform: translateY(-1px);
 }
 
 .theme-toggle-btn {

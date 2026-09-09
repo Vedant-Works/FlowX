@@ -1,19 +1,11 @@
 import './Navbar.css'
 
-function Navbar({ theme, onToggleTheme }) {
+function Navbar({ theme, onToggleTheme, onOpenReviews }) {
   return (
     <header className="navbar">
       <div className="navbar-brand">
         <div className="logo-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="url(#logo-grad)" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-            <defs>
-              <linearGradient id="logo-grad" x1="3" y1="2" x2="21" y2="22" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#3B82F6"/>
-                <stop offset="1" stopColor="#8B5CF6"/>
-              </linearGradient>
-            </defs>
-          </svg>
+          <img src="/logo.png" alt="FlowX Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'inherit' }} />
         </div>
         <div className="brand-text">
           <h1 className="brand-title">Flow<span>X</span></h1>
@@ -22,6 +14,15 @@ function Navbar({ theme, onToggleTheme }) {
       </div>
 
       <div className="navbar-actions">
+        <button
+          type="button"
+          className="community-reviews-btn"
+          onClick={onOpenReviews}
+          title="Community Commuter Reviews & Feedback"
+          aria-label="Community Reviews"
+        >
+          💬 <span className="reviews-btn-label">Reviews</span>
+        </button>
         <button
           type="button"
           className="theme-toggle-btn"

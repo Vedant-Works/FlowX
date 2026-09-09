@@ -19,6 +19,10 @@ function isInIndia(lat, lon) {
   )
 }
 
+// In-memory cache with 10-minute TTL to prevent redundant requests and 429 rate limits
+const suggestionsCache = new Map()
+const CACHE_TTL_MS = 10 * 60 * 1000
+
 /**
  * Fetch location suggestions for a partial query string.
  * Returns an array of { lat, lon, name, description } objects — India only.
@@ -26,7 +30,12 @@ function isInIndia(lat, lon) {
 export async function fetchSuggestions(query) {
   if (!query || query.trim().length < 2) return []
 
-  const trimmed = query.trim()
+  const trimmed = query.trim().toLowerCase()
+
+  const cached = suggestionsCache.get(trimmed)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data
+  }
 
   // Run Photon and Nominatim in parallel for speed + coverage
   const [photonResults, nominatimResults] = await Promise.allSettled([
@@ -48,7 +57,9 @@ export async function fetchSuggestions(query) {
     if (!isDup) merged.push(nom)
   }
 
-  return merged.slice(0, 7) // Cap at 7 suggestions
+  const finalResults = merged.slice(0, 7) // Cap at 7 suggestions
+  suggestionsCache.set(trimmed, { data: finalResults, timestamp: Date.now() })
+  return finalResults
 }
 
 async function fetchPhotonSuggestions(query) {

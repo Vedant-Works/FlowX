@@ -3,8 +3,7 @@ import './NavSimulatorHUD.css'
 
 const VEHICLE_EMOJIS = {
   car: '🚗',
-  bike: '🚲',
-  truck: '🚚',
+  bike: '🛵',
   walking: '🚶',
 }
 
@@ -21,10 +20,14 @@ function NavSimulatorHUD({
   onPauseToggle,
   onSpeedChange,
   onStop,
+  navMode = 'sim',
+  onToggleNavMode,
+  isLiveTracking = false,
 }) {
   if (!selectedRoute) return null
 
   const vehicleEmoji = VEHICLE_EMOJIS[vehicle] || '🚗'
+  const isLive = navMode === 'live'
 
   return (
     <div className="nav-hud-container animate-fade-in">
@@ -32,7 +35,16 @@ function NavSimulatorHUD({
         <div className="nav-hud-title-group">
           <span className="nav-vehicle-badge">{vehicleEmoji}</span>
           <div>
-            <span className="nav-mode-label">LIVE NAVIGATION MODE</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="nav-mode-label">
+                {isLive ? '📡 LIVE GPS NAVIGATION' : '🧭 ROUTE SIMULATOR'}
+              </span>
+              {isLive && (
+                <span style={{ fontSize: '10px', background: '#10b981', color: '#fff', padding: '1px 6px', borderRadius: '8px', fontWeight: 'bold' }}>
+                  ACTIVE
+                </span>
+              )}
+            </div>
             <h4 className="nav-route-name">{selectedRoute.label}</h4>
           </div>
         </div>
@@ -88,41 +100,83 @@ function NavSimulatorHUD({
       </div>
 
       <div className="nav-controls-row">
-        <button
-          type="button"
-          className="nav-control-btn pause-btn"
-          onClick={onPauseToggle}
-        >
-          {isPaused ? (
-            <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <polygon points="5 3 19 12 5 21 5 3" />
-              </svg>
-              Resume
-            </>
-          ) : (
-            <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="4" width="4" height="16" />
-                <rect x="14" y="4" width="4" height="16" />
-              </svg>
-              Pause
-            </>
-          )}
-        </button>
-
-        <div className="speed-multiplier-group">
-          {[1, 2, 5].map((mult) => (
+        {isLive ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '12px', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+              Live GPS Tracking Motion
+            </span>
+            {onToggleNavMode && (
+              <button
+                type="button"
+                className="nav-control-btn"
+                onClick={onToggleNavMode}
+                style={{ fontSize: '11px', padding: '6px 12px' }}
+                title="Switch to Demo Simulation"
+              >
+                Switch to Simulator
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
             <button
-              key={mult}
               type="button"
-              className={`speed-multiplier-btn ${speedMultiplier === mult ? 'active' : ''}`}
-              onClick={() => onSpeedChange(mult)}
+              className="nav-control-btn pause-btn"
+              onClick={onPauseToggle}
             >
-              {mult}x
+              {isPaused ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                  Resume
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16" />
+                    <rect x="14" y="4" width="4" height="16" />
+                  </svg>
+                  Pause
+                </>
+              )}
             </button>
-          ))}
-        </div>
+
+            <div className="speed-multiplier-group">
+              {[1, 2, 5].map((mult) => (
+                <button
+                  key={mult}
+                  type="button"
+                  className={`speed-multiplier-btn ${speedMultiplier === mult ? 'active' : ''}`}
+                  onClick={() => onSpeedChange(mult)}
+                >
+                  {mult}x
+                </button>
+              ))}
+            </div>
+
+            {onToggleNavMode && isLiveTracking && (
+              <button
+                type="button"
+                className="nav-control-btn"
+                onClick={onToggleNavMode}
+                style={{ fontSize: '11px', padding: '6px 10px', marginLeft: 'auto' }}
+                title="Use Live GPS"
+              >
+                Live GPS
+              </button>
+            )}
+            {!isLiveTracking && (
+              <span
+                style={{ fontSize: '10px', color: 'var(--text-muted)', marginLeft: 'auto', padding: '4px 8px', background: 'var(--bg-glass)', borderRadius: '4px' }}
+                title="GPS is OFF — Simulation Mode Only"
+              >
+                GPS OFF (Sim Only)
+              </span>
+            )}
+          </>
+        )}
       </div>
     </div>
   )

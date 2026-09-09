@@ -5,6 +5,7 @@ import WeatherWidget from './components/WeatherWidget'
 import TrafficWidget from './components/TrafficWidget'
 import RouteList from './components/RouteList'
 import FlowMap from './components/FlowMap'
+import CommunityReviewsModal from './components/CommunityReviewsModal'
 import { getRankedRoutes } from './services/routing'
 import './App.css'
 
@@ -20,6 +21,7 @@ function App() {
   const [customWaypoint, setCustomWaypoint] = useState(null)
   const [customDest, setCustomDest] = useState(null)
   const [userLocation, setUserLocation] = useState(null)
+  const [isReviewsOpen, setIsReviewsOpen] = useState(false)
 
   const [mobileTab, setMobileTab] = useState('plan') // 'plan' | 'map'
 
@@ -64,7 +66,11 @@ function App() {
 
   return (
     <div className={`app-container mobile-tab-${mobileTab}`}>
-      <Navbar theme={theme} onToggleTheme={handleToggleTheme} />
+      <Navbar
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        onOpenReviews={() => setIsReviewsOpen(true)}
+      />
       
       <div className="app-body">
         <aside className={`app-sidebar ${mobileTab === 'plan' ? 'mobile-visible' : 'mobile-hidden'}`}>
@@ -164,6 +170,12 @@ function App() {
           <span className="mobile-nav-label">Map View</span>
         </button>
       </nav>
+
+      {/* Community Reviews & Feedback Modal */}
+      <CommunityReviewsModal
+        isOpen={isReviewsOpen}
+        onClose={() => setIsReviewsOpen(false)}
+      />
     </div>
   )
 }

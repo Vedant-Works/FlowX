@@ -3,7 +3,7 @@ import './TrafficWidget.css'
 function TrafficWidget({ trafficInfo, vehicle }) {
   if (!trafficInfo) return null
 
-  const isMotorized = vehicle === 'car' || vehicle === 'truck'
+  const isMotorized = vehicle === 'car' || vehicle === 'bike'
   const isTomTom = trafficInfo.dataSource === 'TomTom Real-Time'
 
   return (
@@ -17,10 +17,14 @@ function TrafficWidget({ trafficInfo, vehicle }) {
           <div>
             <div className="traffic-title-row">
               <span className="traffic-level-label" style={{ color: trafficInfo.color }}>
-                {trafficInfo.label}
+                {vehicle === 'walking'
+                  ? (trafficInfo.isDeserted ? 'Deserted Road (No Traffic)' : 'Active Corridor (Live Traffic)')
+                  : trafficInfo.label}
               </span>
               <span className="congestion-percent">
-                {trafficInfo.congestionFactor}% Congested
+                {vehicle === 'walking'
+                  ? `${trafficInfo.trafficActivity ?? 50}% Street Activity`
+                  : `${trafficInfo.congestionFactor}% Congested`}
               </span>
             </div>
             <div className="traffic-source-badge-row">
@@ -52,6 +56,24 @@ function TrafficWidget({ trafficInfo, vehicle }) {
             <span className="detail-title">Current vs Free Flow</span>
             <span className="detail-value">
               {trafficInfo.currentSpeedKmh ? `${trafficInfo.currentSpeedKmh} / ${trafficInfo.freeFlowSpeedKmh} km/h` : 'Optimal'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {vehicle === 'walking' && trafficInfo.trafficActivity != null && (
+        <div className="traffic-details-row">
+          <div className="traffic-detail-box">
+            <span className="detail-title">Street Activity</span>
+            <span className="detail-value" style={{ color: trafficInfo.isDeserted ? '#ef4444' : '#10b981' }}>
+              {trafficInfo.isDeserted ? '🚨 Very Low / Deserted' : '🛡️ Live Traffic Flow'}
+            </span>
+          </div>
+
+          <div className="traffic-detail-box">
+            <span className="detail-title">Natural Surveillance</span>
+            <span className="detail-value">
+              {trafficInfo.isDeserted ? 'Low (Isolated road)' : 'High (Vehicles passing)'}
             </span>
           </div>
         </div>

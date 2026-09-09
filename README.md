@@ -521,5 +521,5 @@ Content-Type: application/json
 
 ## 📄 License
 
-Distributed under the MIT License. Developed for intelligent urban commuting.
+Developed for intelligent urban commuting. Free to use.
 

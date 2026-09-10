@@ -241,7 +241,6 @@ function FlowMap({
   // Map Layer Controls
   const [showAltRoutesLayer, setShowAltRoutesLayer] = useState(false)
   const [showTrafficFlowLayer, setShowTrafficFlowLayer] = useState(Boolean(TOMTOM_API_KEY))
-  const [showMobileLayers, setShowMobileLayers] = useState(false)
 
   // POI (Places of Interest) state
   const [showPoisLayer, setShowPoisLayer] = useState(false)
@@ -432,71 +431,56 @@ function FlowMap({
         </div>
       )}
 
-      {/* Map Layer Toolbar Controls */}
+      {/* Map Layer Toolbar Controls (Separate buttons for desktop & mobile) */}
       {!isNavigating && (
-        <>
-          {/* Mobile Layer Toggle Trigger */}
-          <div className="map-mobile-layer-trigger">
+        <div className="map-layer-toolbar animate-fade-in">
+          <button
+            type="button"
+            className={`layer-btn live-gps-btn ${isLiveTracking ? 'active' : ''}`}
+            onClick={() => {
+              toggleLiveTracking()
+              if (!isLiveTracking && !isNavigating) startTracking()
+            }}
+            title="Continuous Live GPS Location Tracking"
+            aria-label="Toggle Continuous Live GPS Tracking"
+          >
+            📡 Live GPS {isLiveTracking ? 'ON' : 'OFF'}
+          </button>
+
+          {TOMTOM_API_KEY && (
             <button
               type="button"
-              className={`layer-btn-mobile-trigger ${showMobileLayers ? 'active' : ''}`}
-              onClick={() => setShowMobileLayers((prev) => !prev)}
-              aria-label="Toggle map layers menu"
+              className={`layer-btn traffic-btn ${showTrafficFlowLayer ? 'active' : ''}`}
+              onClick={() => setShowTrafficFlowLayer((prev) => !prev)}
+              title="Toggle Real-Time TomTom Traffic Flow Layer"
+              aria-label="Toggle Real-Time Traffic Layer"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                <polyline points="2 17 12 22 22 17" />
-                <polyline points="2 12 12 17 22 12" />
-              </svg>
-              <span>Layers</span>
+              🚦 Traffic {showTrafficFlowLayer ? 'ON' : 'OFF'}
             </button>
-          </div>
+          )}
 
-          <div className={`map-layer-toolbar animate-fade-in ${showMobileLayers ? 'mobile-expanded' : ''}`}>
+          <button
+            type="button"
+            className={`layer-btn pois-btn ${showPoisLayer ? 'active' : ''}`}
+            onClick={() => setShowPoisLayer((prev) => !prev)}
+            title="Explore Shops, Parks, Tourist Attractions & Cafes"
+            aria-label="Toggle Explore Places Layer"
+          >
+            📍 Places {showPoisLayer ? 'ON' : 'OFF'}
+          </button>
+
+          {hasRoutes && routes.length > 1 && (
             <button
               type="button"
-              className={`layer-btn live-gps-btn ${isLiveTracking ? 'active' : ''}`}
-              onClick={() => {
-                toggleLiveTracking()
-                if (!isLiveTracking && !isNavigating) startTracking()
-              }}
-              title="Continuous Live GPS Location Tracking"
+              className={`layer-btn alt-routes-btn ${showAltRoutesLayer ? 'active' : ''}`}
+              onClick={() => setShowAltRoutesLayer((prev) => !prev)}
+              title="Toggle Alternative Routes"
+              aria-label="Toggle Alternative Routes"
             >
-              📡 Live GPS {isLiveTracking ? 'ON' : 'OFF'}
+              🛣️ Alts {showAltRoutesLayer ? 'ON' : 'OFF'}
             </button>
-
-            {TOMTOM_API_KEY && (
-              <button
-                type="button"
-                className={`layer-btn ${showTrafficFlowLayer ? 'active' : ''}`}
-                onClick={() => setShowTrafficFlowLayer((prev) => !prev)}
-                title="Toggle Real-Time TomTom Traffic Flow Layer"
-              >
-                🚦 Traffic {showTrafficFlowLayer ? 'ON' : 'OFF'}
-              </button>
-            )}
-
-            <button
-              type="button"
-              className={`layer-btn ${showPoisLayer ? 'active' : ''}`}
-              onClick={() => setShowPoisLayer((prev) => !prev)}
-              title="Explore Shops, Parks, Tourist Attractions & Cafes"
-            >
-              📍 Places {showPoisLayer ? 'ON' : 'OFF'}
-            </button>
-
-            {hasRoutes && routes.length > 1 && (
-              <button
-                type="button"
-                className={`layer-btn ${showAltRoutesLayer ? 'active' : ''}`}
-                onClick={() => setShowAltRoutesLayer((prev) => !prev)}
-                title="Toggle Alternative Routes"
-              >
-                🛣️ Alts {showAltRoutesLayer ? 'ON' : 'OFF'}
-              </button>
-            )}
-          </div>
-        </>
+          )}
+        </div>
       )}
 
       {/* POI Category Filter Sub-toolbar */}

@@ -694,45 +694,69 @@
 }
 
 @media (max-width: 768px) {
-  /* Mobile Layer Trigger & Dropdown */
+  /* Mobile Separate Buttons Toolbar (GPS on/off, Alternate Routes, Traffic, Places) */
   .map-mobile-layer-trigger {
-    display: block;
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    z-index: 999;
-  }
-
-  .layer-btn-mobile-trigger {
-    padding: 7px 12px;
-    font-size: 11px;
-    font-weight: 700;
-  }
-
-  .map-layer-toolbar {
     display: none;
   }
 
-  .map-layer-toolbar.mobile-expanded {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    top: 50px;
-    right: 12px;
-    background: var(--bg-surface);
-    backdrop-filter: var(--backdrop-blur);
-    -webkit-backdrop-filter: var(--backdrop-blur);
-    padding: 8px;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-lg);
-    gap: 6px;
-    min-width: 140px;
+  /* Offset Leaflet zoom controls so they don't collide with the top buttons */
+  .leaflet-top.leaflet-left {
+    top: 54px;
+    left: 12px;
   }
 
-  .map-layer-toolbar.mobile-expanded .layer-btn {
-    width: 100%;
+  .map-layer-toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     justify-content: flex-start;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    left: auto;
+    max-width: calc(100vw - 24px);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    gap: 6px;
+    z-index: 999;
+    padding: 2px 2px;
+  }
+
+  .map-layer-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .map-layer-toolbar .layer-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 11px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+    touch-action: manipulation;
+  }
+
+  .map-layer-toolbar .layer-btn.active {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
+  }
+
+  .map-layer-toolbar .live-gps-btn.active {
+    background: rgba(16, 185, 129, 0.22) !important;
+    color: #10b981 !important;
+    border-color: #10b981 !important;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.45) !important;
+  }
+
+  .map-layer-toolbar .alt-routes-btn.active {
+    background: rgba(59, 130, 246, 0.22) !important;
+    color: #60a5fa !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.4) !important;
   }
 
   /* Floating Bottom Route Card on Mobile */
@@ -777,10 +801,10 @@
   }
 
   .poi-category-bar {
-    top: 12px;
-    left: 12px;
-    right: auto;
-    max-width: calc(100vw - 110px);
+    top: 54px;
+    right: 12px;
+    left: auto;
+    max-width: calc(100vw - 74px);
     padding: 5px 10px;
   }
 

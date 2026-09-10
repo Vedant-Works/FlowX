@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Navbar from './components/Navbar'
 import TripPlanner from './components/TripPlanner'
 import WeatherWidget from './components/WeatherWidget'
-import TrafficWidget from './components/TrafficWidget'
+
 import RouteList from './components/RouteList'
 import FlowMap from './components/FlowMap'
 import CommunityReviewsModal from './components/CommunityReviewsModal'
@@ -93,12 +93,7 @@ function App() {
                 destinationName={tripResult.destinationName}
               />
             )}
-            {selectedRoute?.traffic && (
-              <TrafficWidget
-                trafficInfo={selectedRoute.traffic}
-                vehicle={tripResult.vehicle}
-              />
-            )}
+
             <RouteList
               tripResult={tripResult}
               selectedRouteId={selectedRouteId}

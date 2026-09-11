@@ -205,7 +205,14 @@ function TripPlanner({
           placeName = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
         }
 
-        const label = accuracy ? `${placeName} (±${Math.round(accuracy)}m)` : placeName
+        if (/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(placeName)) {
+          placeName = 'Current Location'
+        }
+
+        const label = placeName === 'Current Location' 
+          ? `Current Location (±${Math.round(accuracy)}m)` 
+          : (accuracy ? `${placeName} (±${Math.round(accuracy)}m)` : placeName)
+
         setSource(label)
         setSourceObj({ lat: latitude, lon: longitude, name: label })
         // Notify parent so map can pan + show marker

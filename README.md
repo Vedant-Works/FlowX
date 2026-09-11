@@ -11,8 +11,8 @@
 
 ### 🚦 Intelligent Urban Mobility & Traffic Distribution Platform
 
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-4-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com/)
 [![Leaflet](https://img.shields.io/badge/Leaflet-1.9-199900?style=flat-square&logo=leaflet&logoColor=white)](https://leafletjs.com/)
@@ -33,15 +33,15 @@
 ```mermaid
 flowchart TD
     subgraph Client ["🖥️ Frontend &bull; React + Vite + Leaflet"]
-        UI["<b>Trip Planner</b><br/>Origin, Destination, Mode & Preference"]
-        GEO["<b>Geocoding Pipeline</b><br/>6-Tier Resilience Fallback"]
-        MAP["<b>Interactive Map & HUD</b><br/>Leaflet Map + Navigation Simulator"]
+        UI["<b>Trip Planner & Controls</b><br/>Origin, Destination, Stopover & Mode"]
+        GEO["<b>Geocoding Pipeline</b><br/>6-Tier Resilience & Reverse Geocoding"]
+        MAP["<b>Interactive Map & HUD</b><br/>Live GPS Tracking + Turn-by-Turn Engine"]
     end
 
     subgraph RoutingEngine ["⚡ Real-Time Analysis Engine"]
-        OSRM["<b>OSRM Routing</b><br/>Direct Path + Corridor Offsets"]
-        TRAFFIC["<b>Traffic Engine</b><br/>TomTom API + Peak-Hour Model"]
-        WEATHER["<b>Weather Service</b><br/>Open-Meteo Conditions & Rain"]
+        ROUTING["<b>Routing Services</b><br/>TomTom Routing + OSRM Corridors"]
+        TRAFFIC["<b>Traffic Engine</b><br/>TomTom Flow API + Peak-Hour Model"]
+        WEATHER["<b>Weather Service</b><br/>Open-Meteo Conditions & WMO Severity"]
         RANK["<b>Ranking Algorithm</b><br/>Composite 0–100 Route Scoring"]
     end
 
@@ -51,9 +51,9 @@ flowchart TD
     end
 
     UI --> GEO
-    GEO --> OSRM
-    OSRM --> TRAFFIC
-    OSRM --> WEATHER
+    GEO --> ROUTING
+    ROUTING --> TRAFFIC
+    ROUTING --> WEATHER
     TRAFFIC --> RANK
     WEATHER --> RANK
     RANK --> BAL
@@ -71,22 +71,24 @@ flowchart TD
 
 | Category | Status | Capability | Description |
 |:---|:---:|:---|:---|
-| **Planning** | ✅ | **Trip Planner** | Point-to-point journey planning with vehicle profile selection |
-| **Waypoints** | ✅ | **Multi-Stop Routing** | Add, remove, and optimize intermediate stops along the route |
-| **Mapping** | ✅ | **Interactive Map** | Double-click to place markers, hold-and-drag to pan smoothly |
-| **Context Menu** | ✅ | **Map Click Actions** | Right-click anywhere to set start or destination coordinates |
-| **GPS** | ✅ | **Live Geolocation** | Continuous real-time user location tracking via GPS API |
-| **Alternatives** | ✅ | **Corridor Offsets** | Generates up to 5 alternative corridors to prevent bottlenecks |
-| **Scoring** | ✅ | **Multi-Criteria Ranking** | Scores routes based on travel time, distance, traffic, weather, and safety |
-| **Live Traffic** | ✅ | **TomTom + Peak Model** | Real-time traffic flow segments with an urban time-of-day model fallback |
-| **Weather** | ✅ | **Open-Meteo Integration** | Live temperature, humidity, wind, and WMO weather condition adjustments |
-| **Pedestrian Safety**| ✅ | **Night Safety Mode** | Auto-activates 8 PM – 6 AM for pedestrians to avoid deserted backstreets |
-| **Distribution** | ✅ | **Traffic Load Balancing** | Server-side flattening algorithm calculates balanced traffic load |
-| **HUD** | ✅ | **Turn-by-Turn Simulator**| Virtual driving/walking simulation with heads-up display |
+| **Planning** | ✅ | **Trip Planner** | Point-to-point journey planning with vehicle profile selection (🚗 Car, 🛵 Bike, 🚶 Walk) |
+| **Waypoints** | ✅ | **Multi-Stop Routing** | Add, remove, and optimize intermediate stopovers along the route |
+| **Mapping** | ✅ | **Interactive Map** | Double-click to place markers, drag-to-pan, custom popups, and bounds auto-fitting |
+| **Context Menu** | ✅ | **Map Click Actions** | Click anywhere on the map to set origin, destination, or stopover coordinates |
+| **GPS** | ✅ | **Live Geolocation** | Continuous real-time user location tracking with speed (km/h), heading, and accuracy |
+| **Live Navigation**| ✅ | **Live GPS Navigation** | Google Maps-style navigation with polyline snapping, live speed, and auto camera follow |
+| **Simulation** | ✅ | **Route Simulator** | Virtual navigation simulator with pause/resume, speed multipliers (1×–8×), and progress bar |
+| **Turn-by-Turn** | ✅ | **Maneuver Guidance** | Detailed turn-by-turn steps accessible inside the Navigation HUD and route cards |
+| **Alternatives** | ✅ | **Corridor Offsets** | Generates distinct alternative corridors via offset vectors to prevent bottlenecks |
+| **Scoring** | ✅ | **Multi-Criteria Ranking** | Scores routes based on travel time, distance, traffic congestion, weather, and safety |
+| **Live Traffic** | ✅ | **TomTom + Peak Model** | Real-time traffic flow segment speeds with an urban peak-hour model fallback |
+| **Weather** | ✅ | **Open-Meteo Integration** | Live temperature, humidity, wind, and WMO weather condition severity adjustments |
+| **Pedestrian Safety**| ✅ | **Night Safety Mode** | Auto-activates 8 PM – 6 AM for pedestrians to prioritize active, well-lit street traffic |
+| **Distribution** | ✅ | **Traffic Load Balancing** | Server-side flattening algorithm calculates balanced traffic load across corridors |
 | **Sustainability** | ✅ | **CO₂ Estimator** | Estimates grams of carbon emissions per route based on vehicle profile |
-| **Discovery** | ✅ | **POI Exploration** | Discovers nearby hospitals, fuel stations, police booths, and parking |
-| **Community** | ✅ | **Route Reviews** | Read and submit user reviews for specific urban corridors |
-| **Layers** | ✅ | **Custom Map Layers** | Switch between CARTO Light/Dark, OpenStreetMap, and Esri Satellite |
+| **Community** | ✅ | **Route Reviews** | Read and submit localized community reviews and feedback for urban corridors |
+| **GPX Export** | ✅ | **GPX Route Tracks** | One-click export of calculated routes into standard `.gpx` files for GPS devices |
+| **Overlays** | ✅ | **Live Traffic Overlay** | Toggle real-time TomTom traffic congestion raster tiles and alternative route paths |
 
 ---
 
@@ -97,10 +99,11 @@ flowchart TD
 ┌─────────────────────────┬─────────────────────────┬─────────────────────────┐
 │        FRONTEND         │         BACKEND         │       PERSISTENCE       │
 ├─────────────────────────┼─────────────────────────┼─────────────────────────┤
-│ • React 18              │ • Node.js (v18+)        │ • reviews.json          │
-│ • Vite 5                │ • Express 4             │ • Flat-file disk cache  │
-│ • Leaflet 1.9           │ • CORS Middleware       │ • Zero DB requirement   │
-│ • Pure CSS3 Design      │ • RESTful API Design    │ • In-memory fallback    │
+│ • React 19              │ • Node.js (v18+)        │ • reviews.json          │
+│ • Vite 6 / 8            │ • Express 4             │ • Flat-file disk cache  │
+│ • Leaflet 1.9           │ • Python (FastAPI/Flask)│ • Zero DB requirement   │
+│ • React-Leaflet 5       │ • CORS Middleware       │ • In-memory fallback    │
+│ • Pure CSS3 Design      │ • RESTful API Design    │ • LocalStorage state    │
 └─────────────────────────┴─────────────────────────┴─────────────────────────┘
 ```
 
@@ -108,12 +111,12 @@ flowchart TD
 
 | Provider | Purpose | Type | Rate Limits / Key Required |
 |:---|:---|:---:|:---|
-| **OSRM** | Multi-route pathing & geometry | REST | ✅ Open-source / Free public server |
-| **Nominatim** | Forward & reverse geocoding | REST | ⚠️ Free with rate limits (1 req/sec) |
-| **Photon (Komoot)** | Real-time address autocomplete | REST | ⚠️ Free public service (OpenStreetMap data) |
-| **Overpass API** | Points of Interest (POI) queries | Query API | ⚠️ Free public service (India-scoped) |
-| **Open-Meteo** | Live weather & severity codes | REST | ✅ Free for non-commercial use, **No API key needed** |
-| **TomTom Traffic** | Live flow segment speeds & congestion | REST | ✅ Free tier (2,500 free calls/day, API key required) |
+| **OSRM** | Multi-route pathing, geometry & maneuver step instructions | REST | ✅ Open-source / Free public server |
+| **TomTom Routing & Traffic** | Live flow segment data, traffic delay calculations & raster flow tile overlay | REST | ✅ Free tier (2,500 free calls/day, API key required) |
+| **Nominatim** | Forward & reverse geocoding with boundary filtering | REST | ⚠️ Free with rate limits (1 req/sec) |
+| **Photon (Komoot)** | Real-time address autocomplete typeahead | REST | ⚠️ Free public service (OpenStreetMap data) |
+| **Open-Meteo** | Live weather, temperature, humidity, wind & WMO severity codes | REST | ✅ Free for non-commercial use, **No API key needed** |
+| **Overpass API** | Micro-radius name resolution fallback for precise OSM place queries | Query API | ⚠️ Free public service (India-scoped) |
 
 ---
 
@@ -192,46 +195,55 @@ FlowX/
 ├── package.json                         # Root runner (concurrently orchestration)
 ├── README.md                            # Complete documentation
 ├── PROJECT_CONTEXT.md                   # Vision and system design notes
+├── requirements.txt                     # Root Python dependency specification
 │
-├── backend/                             # Express REST API Server
-│   ├── server.js                        # Endpoints: /health, /routes/balance, /reviews
+├── backend/                             # REST API Server (Node.js & Python implementations)
+│   ├── server.js                        # Primary Express server: /health, /routes/balance, /reviews
+│   ├── app.py                           # Alternative Flask backend implementation
+│   ├── main.py                          # Alternative FastAPI backend implementation
 │   ├── reviews.json                     # Flat-file store for community reviews
 │   ├── Procfile                         # Render cloud deployment specification
 │   ├── package.json                     # Backend dependencies (express, cors)
+│   ├── requirements.txt                 # Python backend dependencies
 │   └── README.md                        # Backend service documentation
 │
 └── frontend/                            # React + Vite Client Application
     ├── index.html                       # HTML5 Shell with custom favicon & meta
     ├── vite.config.js                   # Vite bundler configuration
+    ├── vercel.json                      # Vercel SPA routing configuration
     ├── .env.example                     # Environment variable blueprint
-    ├── package.json                     # Frontend dependencies (leaflet, lucide-react)
+    ├── package.json                     # Frontend dependencies (leaflet, react-leaflet)
     └── src/
         ├── main.jsx                     # Client bootstrap entrypoint
         ├── App.jsx                      # Master coordinator (Form, Map & State)
-        ├── App.css                      # Master layout and animations
+        ├── App.css                      # Master layout and responsive styles
         ├── index.css                    # Design tokens (Dark/Light mode, colors, typography)
         ├── leafletSetup.js              # Leaflet asset and icon bundle fixes
         │
         ├── services/                    # Business Logic & External Data Integration
-        │   ├── routing.js               # 6-tier geocoding + OSRM corridor generation
+        │   ├── routing.js               # 6-tier geocoding + multi-route corridor generation
+        │   ├── tomtomRouting.js         # TomTom traffic-aware routing & delay calculation
         │   ├── routeRanking.js          # Multi-criteria scoring & ranking engine
         │   ├── traffic.js               # TomTom live flow + urban peak-hour model
         │   ├── weather.js               # Open-Meteo weather parser & WMO translator
         │   ├── autocomplete.js          # Typeahead search (Photon + Nominatim)
-        │   └── poi.js                   # Nearby Places of Interest (Overpass)
+        │   ├── useLiveLocation.js       # Geolocation watchPosition hook for live tracking
+        │   └── poi.js                   # Overpass API POI helpers & micro-radius fallback
         │
-        ├── utils/
+        ├── utils/                       # Mathematical & Geodesic Utilities
+        │   ├── geoNavEngine.js          # Geodesic navigation engine (snap-to-polyline, bearing)
+        │   ├── gpxExport.js             # Route GPX file generator & download utility
         │   └── routeColors.js           # Route color schemes and polyline palettes
         │
         └── components/                  # Modular React UI Components
-            ├── Navbar.jsx / .css        # Top header, brand branding, theme toggle
-            ├── TripPlanner.jsx / .css   # Form, vehicle selectors, GPS toggle
-            ├── FlowMap.jsx / .css       # Leaflet map, polylines, layer controls
-            ├── RouteList.jsx / .css     # Scored route cards & breakdowns
+            ├── Navbar.jsx / .css        # Top header, branding, theme toggle & reviews button
+            ├── TripPlanner.jsx / .css   # Journey form, vehicle selectors, GPS button
+            ├── FlowMap.jsx / .css       # Leaflet map, polylines, overlays & layer controls
+            ├── RouteList.jsx / .css     # Scored route cards, breakdowns & directions
             ├── LocationInput.jsx / .css # Autocomplete dropdown with geocoding
-            ├── WeatherWidget.jsx / .css # Current weather indicator
+            ├── WeatherWidget.jsx / .css # Current destination weather indicator
             ├── TrafficWidget.jsx / .css # Congestion summary and peak indicator
-            ├── NavSimulatorHUD.jsx/.css # Turn-by-turn navigation simulation HUD
+            ├── NavSimulatorHUD.jsx/.css # Live navigation & turn-by-turn simulation HUD
             ├── CommunityReviewsModal.jsx# Community route rating & feedback modal
             └── ErrorBoundary.jsx        # Component failure protection boundary
 ```
@@ -265,14 +277,17 @@ FlowX ensures zero search failures through a hierarchical fallback mechanism:
    [Tier 5] ───► Photon (Komoot) Fuzzy Search?         ───(Yes)───► [ Coordinates ]
                                  │ (No)
                                  ▼
-   [Tier 6] ───► Overpass Global OSM Fallback?         ───(Yes)───► [ Coordinates ]
+   [Tier 6] ───► Overpass Micro-Radius / OSM Fallback? ───(Yes)───► [ Coordinates ]
 ```
+
+> [!TIP]
+> **User-Friendly Location Labels**: When users tap **"My Location"**, FlowX captures browser GPS fixes and executes reverse geocoding via Nominatim. If an address string is resolved, it displays the local place name; if only coordinates return, it cleanly presents `"Current Location"` instead of raw coordinates.
 
 ---
 
-### 2. Multi-Route Generation (Corridor Offsets)
+### 2. Multi-Route Generation & Corridor Offsets
 
-Traditional mapping apps display minor variations of the same major road. FlowX generates genuine alternative corridors using perpendicular offset vectors at 18% and 32% of the direct trajectory:
+Traditional mapping apps display minor variations of the same major road. FlowX generates genuine alternative corridors using TomTom traffic-aware alternatives and OSRM perpendicular offset vectors at 18% and 32% of the direct trajectory:
 
 ```text
                        ┌───────────────────────────────┐
@@ -286,10 +301,10 @@ Traditional mapping apps display minor variations of the same major road. FlowX 
                        └───────────────────────────────┘
 ```
 
-1. Computes the direct road trajectory via OSRM.
-2. Calculates perpendicular offset coordinates at fractional distances.
-3. Requests waypoint-snapped routes through these distinct corridors.
-4. Deduplicates routes with excessive spatial or duration overlap.
+1. **TomTom Traffic-Aware Engine**: If a TomTom API key is configured and a motorized profile (`car`) is selected, FlowX queries TomTom's Calculate Route API with real-time delays and alternative routes (`maxAlternatives=3`).
+2. **OSRM Corridor Offsets**: For open-source routing, FlowX computes direct road trajectory and calculates perpendicular offset coordinates at 18% and 32% fractional distances.
+3. **Waypoint Snapping**: Requests waypoint-snapped routes through these distinct corridors to prevent bottlenecking.
+4. **Intelligent Deduplication**: Automatically eliminates redundant route options with spatial overlap (< 250m difference) or duration overlap (< 40s difference).
 
 ---
 
@@ -302,7 +317,7 @@ Route Polyline:  [Origin] ──•──────•──────•─
 Sample Points:             15%    35%    50%    70%    85%
 ```
 
-* **Live Mode (TomTom)**: Queries `/traffic/services/4/flowSegmentData` for real-time speed vs free-flow speed.
+* **Live Mode (TomTom)**: Queries `/traffic/services/4/flowSegmentData` for real-time speed vs free-flow speed and calculates estimated delay in minutes.
 * **Urban Model Fallback**: If TomTom is unconfigured or rate-limited, FlowX computes peak multipliers using local time:
 
 | Time Window | Commute Stage | Weekday Factor | Weekend Factor | Traffic Flow Status |
@@ -360,14 +375,13 @@ Each route receives a composite score between **0 and 100** based on normalized 
 └─────────────┴──────────┴──────────────┴──────────┴───────────┴──────────────┘
 ```
 
-Visual distribution of priorities:
-
-```text
-Fastest   [████████████████████ 50% Time] [██████████ 25% Traf] [15% Dist] [10% Other]
-Balanced  [████████████ 30% Time] [██████████ 25% Traf] [15% Dist] [15% Wtr] [15% Safe]
-Normal    [████████████████ 40% Time] [██████████ 25% Dist] [15% Traf] [20% Other]
-Safest    [████████████████ 40% Safe] [████████ 20% Traf] [15% Time] [15% Wtr] [10% Dist]
-```
+#### Route Presentation by User Preference:
+* **Motorized Profiles (Four-Wheeler 🚗 & Two-Wheeler 🛵)**:
+  * **Fastest**: Displays **strictly 1 route** (`⚡ Fastest Direct`) prioritizing minimal duration and lowest traffic delays.
+  * **Balanced**: Displays **strictly 2 routes** (`🌟 Recommended Balanced Corridor` + `🌿 Smooth Traffic Alternative` / `⚡ Fastest Corridor`) to encourage decentralized traffic flow.
+* **Pedestrian Profile (Walking 🚶)**:
+  * **Safest (Night Mode 8 PM – 6 AM)**: Displays **strictly 1 vetted route** (`🌟 Recommended Safe Night Corridor`) prioritizing active street traffic and rejecting deserted alleys.
+  * **Normal**: Displays **strictly 2 routes** (`⚡ Fastest Route` + `🌿 Alternative Route`).
 
 ---
 
@@ -394,7 +408,30 @@ flowchart TD
 ```
 
 > [!IMPORTANT]
-> **Night Safety Route Rule**: When in `Safest` mode, FlowX suppresses confusing alternative routes and presents **exactly 1 vetted, high-traffic pedestrian corridor** to ensure personal security.
+> **Night Safety Route Rule**: When in `Safest` mode, FlowX evaluates live street traffic activity (`trafficActivity >= 50`). Busy vehicular streets provide natural street lighting and surveillance. Deserted backstreets (`trafficActivity < 25`) receive heavy score penalties and visible alerts (`🚨 Deserted (No Traffic)`).
+
+---
+
+### 8. Live GPS Navigation & Turn-by-Turn Engine
+
+FlowX offers a dual-mode navigation experience powered by `geoNavEngine.js`:
+
+```text
+  ┌─────────────────────────────────────────────────────────────┐
+  │                    Navigation System                        │
+  └──────────────┬──────────────────────────────┬───────────────┘
+                 │ (Live GPS ON)                │ (Live GPS OFF / Demo)
+                 ▼                              ▼
+      [ Live GPS Navigation ]          [ Virtual Simulator ]
+      • Continuous GPS tracking        • Play / Pause controls
+      • Real-time polyline snapping    • Speed multipliers (1×–8×)
+      • Dynamic speed (km/h) & ETA     • Synthetic progression
+      • Smooth camera auto-follow      • Turn-by-turn preview
+```
+
+* **Live GPS Navigation**: True Google Maps-style navigation. As you travel, your position snaps to the route polyline using WGS84 geodesic projection. The camera follows your heading and position smoothly, dynamically displaying remaining distance and remaining duration while keeping the polyline ahead clear and unobstructed.
+* **Virtual Route Simulation**: Available when GPS is off or for desktop demonstrations, allowing users to test routes at 1×, 2×, 4×, or 8× speeds with play/pause controls.
+* **Integrated Steps HUD**: During active navigation, an integrated **"Steps"** button inside the HUD header allows instant inspection of all turn-by-turn maneuver instructions without pausing navigation.
 
 ---
 

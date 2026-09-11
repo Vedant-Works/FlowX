@@ -23,6 +23,7 @@ function NavSimulatorHUD({
   navMode = 'sim',
   onToggleNavMode,
   isLiveTracking = false,
+  onShowSteps,
 }) {
   if (!selectedRoute) return null
 
@@ -68,10 +69,29 @@ function NavSimulatorHUD({
             <polyline points="9 18 15 12 9 6" />
           </svg>
         </div>
-        <div className="instruction-text">
+        <div className="instruction-text" style={{ flex: 1 }}>
           <span className="instruction-heading">{currentInstruction}</span>
           <span className="instruction-sub">FlowX Intelligent Route Navigation</span>
         </div>
+        {onShowSteps && (
+          <button
+            type="button"
+            className="banner-details-btn"
+            onClick={onShowSteps}
+            title="View full turn-by-turn directions"
+            style={{ marginLeft: 'auto', padding: '6px 12px', background: 'var(--bg-glass)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="8" y1="6" x2="21" y2="6"/>
+              <line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+            <span>Steps</span>
+          </button>
+        )}
       </div>
 
       <div className="nav-stats-row">

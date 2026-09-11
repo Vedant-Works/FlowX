@@ -343,7 +343,7 @@ function FlowMap({
 
   // Navigation simulation loop
   useEffect(() => {
-    if (!isNavigating || !path.length || isPaused) {
+    if (!isNavigating || !path.length || isPaused || navMode === 'live') {
       if (animRef.current) clearInterval(animRef.current)
       return
     }
@@ -459,15 +459,6 @@ function FlowMap({
             </button>
           )}
 
-          <button
-            type="button"
-            className={`layer-btn pois-btn ${showPoisLayer ? 'active' : ''}`}
-            onClick={() => setShowPoisLayer((prev) => !prev)}
-            title="Explore Shops, Parks, Tourist Attractions & Cafes"
-            aria-label="Toggle Explore Places Layer"
-          >
-            📍 Places {showPoisLayer ? 'ON' : 'OFF'}
-          </button>
 
           {hasRoutes && routes.length > 1 && (
             <button
@@ -554,26 +545,6 @@ function FlowMap({
                 </svg>
                 {isLiveTracking ? 'Live GPS Nav' : 'Simulate Route'}
               </button>
-
-              <button
-                type="button"
-                className="banner-details-btn"
-                onClick={() => {
-                  setShowStepsDrawer(true)
-                  onOpenPlanner?.()
-                }}
-                title="View full turn-by-turn directions"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <line x1="8" y1="6" x2="21" y2="6"/>
-                  <line x1="8" y1="12" x2="21" y2="12"/>
-                  <line x1="8" y1="18" x2="21" y2="18"/>
-                  <line x1="3" y1="6" x2="3.01" y2="6"/>
-                  <line x1="3" y1="12" x2="3.01" y2="12"/>
-                  <line x1="3" y1="18" x2="3.01" y2="18"/>
-                </svg>
-                <span>Steps</span>
-              </button>
             </div>
           </div>
         </div>
@@ -603,6 +574,10 @@ function FlowMap({
           navMode={navMode}
           onToggleNavMode={() => setNavMode((prev) => (prev === 'live' ? 'sim' : 'live'))}
           isLiveTracking={isLiveTracking}
+          onShowSteps={() => {
+            setShowStepsDrawer(true)
+            onOpenPlanner?.()
+          }}
         />
       )}
 
@@ -747,16 +722,18 @@ function FlowMap({
           <>
             {routes.map((route, idx) => {
               const isSelected = route.id === (selectedRouteId || routes[0]?.id)
-              const routeColor = getRouteColor(idx).main
+              const routeColor = isSelected ? getRouteColor(idx).main : getRouteColor(idx).muted
 
               // When a user selects a route, other routes are not visible unless explicitly toggled
               if (!isSelected && !showAltRoutesLayer) return null
 
+              const displayPath = (isNavigating && isSelected) ? route.path.slice(activeNavIndex) : route.path
+
               return (
                 <React.Fragment key={route.id}>
-                  {/* Dark outline stroke for contrast against map */}
+                  {/* Outer shadow/outline */}
                   <Polyline
-                    positions={route.path}
+                    positions={displayPath}
                     color="#1a1a2e"
                     weight={isSelected ? 9 : 6}
                     opacity={isSelected ? 0.65 : 0.3}
@@ -766,7 +743,7 @@ function FlowMap({
                   />
                   {/* Colored route line on top */}
                   <Polyline
-                    positions={route.path}
+                    positions={displayPath}
                     color={routeColor}
                     weight={isSelected ? 6 : 4.5}
                     opacity={isSelected ? 1 : 0.65}
